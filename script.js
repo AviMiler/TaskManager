@@ -4,8 +4,11 @@ const DB = {
     tasks: 'tb_tasks',
     backup: 'tb_backup',
     currentProject: 'tb_currentProject',
-    columns: 'tb_columns'
+    columns: 'tb_columns',
+    user: 'tb_user'
 };
+
+const DEFAULT_USER = { name: 'דנה גולן', role: 'מנהל פרויקטים', hue: 200 };
 
 let currentProjectId = null;
 let editingTaskId = null;
@@ -33,6 +36,7 @@ const DEFAULT_COLUMNS = [
 document.addEventListener('DOMContentLoaded', () => {
     initNextTaskId();
     setupEventListeners();
+    renderUserUI();
     loadProjects();
     restoreCurrentProject();
 });
@@ -139,6 +143,130 @@ function renameColumn(id, newName) {
     col.name = escapeHtml(newName);
     saveColumns(columns);
     renderKanban();
+}
+
+function getUser() {
+    const d = localStorage.getItem(DB.user);
+    if (!d) return { ...DEFAULT_USER };
+    try {
+        const u = JSON.parse(d);
+        return {
+            name: u.name || DEFAULT_USER.name,
+            role: u.role || DEFAULT_USER.role,
+            hue: (u.hue !== undefined && u.hue !== null) ? u.hue : DEFAULT_USER.hue
+        };
+    } catch (e) {
+        return { ...DEFAULT_USER };
+    }
+}
+
+function saveUser(user) {
+    localStorage.setItem(DB.user, JSON.stringify(user));
+    createBackup();
+    renderUserUI();
+}
+
+function renderUserUI() {
+    const u = getUser();
+    const ini = initials(u.name) || u.name.substring(0, 2);
+
+    const topAvatar = document.querySelector('.topbar > .avatar');
+    if (topAvatar) {
+        topAvatar.style.setProperty('--hue', u.hue);
+        topAvatar.textContent = ini;
+        topAvatar.title = u.name;
+    }
+
+    const card = document.querySelector('.user-card');
+    if (card) {
+        const cardAvatar = card.querySelector('.avatar');
+        if (cardAvatar) {
+            cardAvatar.style.setProperty('--hue', u.hue);
+            cardAvatar.textContent = ini;
+        }
+        const nameEl = card.querySelector('.user-name');
+        if (nameEl) nameEl.textContent = u.name;
+        const roleEl = card.querySelector('.user-role');
+        if (roleEl) roleEl.textContent = u.role;
+    }
+}
+
+function openUserProfileModal() {
+    closePopovers();
+    const u = getUser();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.id = 'taskModal';
+    overlay.innerHTML = `
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h2 class="modal-title">פרטי המשתמש</h2>
+                <button class="modal-close" type="button" aria-label="סגור" onclick="closeModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="field">
+                    <label class="field-label">שם מלא *</label>
+                    <input type="text" id="userName" class="field-input" value="${escapeHtml(u.name)}" placeholder="שם פרטי ושם משפחה">
+                </div>
+                <div class="field">
+                    <label class="field-label">תפקיד</label>
+                    <input type="text" id="userRole" class="field-input" value="${escapeHtml(u.role)}" placeholder="מנהל פרויקטים, מפתח...">
+                </div>
+                <div class="field">
+                    <label class="field-label">צבע (גוון) — ${u.hue}°</label>
+                    <input type="range" id="userHue" class="field-input" min="0" max="360" step="1" value="${u.hue}">
+                    <div class="user-preview">
+                        <div class="avatar avatar-lg" id="userPreviewAvatar" style="--hue: ${u.hue};">${escapeHtml(initials(u.name) || 'אא')}</div>
+                        <div>
+                            <div class="user-name" id="userPreviewName">${escapeHtml(u.name)}</div>
+                            <div class="user-role" id="userPreviewRole">${escapeHtml(u.role)}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" type="button" onclick="closeModal()">ביטול</button>
+                <button class="btn-primary" type="button" onclick="saveUserFromModal()">שמור</button>
+            </div>
+        </div>
+    `;
+    overlay.onclick = () => closeModal();
+    document.body.appendChild(overlay);
+
+    const nameInput = overlay.querySelector('#userName');
+    const roleInput = overlay.querySelector('#userRole');
+    const hueInput = overlay.querySelector('#userHue');
+    const previewAvatar = overlay.querySelector('#userPreviewAvatar');
+    const previewName = overlay.querySelector('#userPreviewName');
+    const previewRole = overlay.querySelector('#userPreviewRole');
+    const hueLabel = overlay.querySelector('.field-label + input + .user-preview')?.previousElementSibling?.previousElementSibling;
+
+    const refreshPreview = () => {
+        previewAvatar.textContent = initials(nameInput.value) || (nameInput.value || 'אא').substring(0, 2);
+        previewAvatar.style.setProperty('--hue', hueInput.value);
+        previewName.textContent = nameInput.value || '—';
+        previewRole.textContent = roleInput.value || '';
+    };
+    nameInput.addEventListener('input', refreshPreview);
+    roleInput.addEventListener('input', refreshPreview);
+    hueInput.addEventListener('input', () => {
+        refreshPreview();
+        const lbl = overlay.querySelector('label[for="userHue"]') ||
+            overlay.querySelectorAll('.field-label')[2];
+        if (lbl) lbl.textContent = `צבע (גוון) — ${hueInput.value}°`;
+    });
+
+    setTimeout(() => nameInput.focus(), 50);
+}
+
+function saveUserFromModal() {
+    const name = document.getElementById('userName').value.trim();
+    if (!name) { alert('שם חובה'); return; }
+    const role = document.getElementById('userRole').value.trim();
+    const hue = parseInt(document.getElementById('userHue').value, 10) || 0;
+    saveUser({ name, role, hue });
+    closeModal();
 }
 
 function getCurrentProjectId() {
@@ -1004,18 +1132,20 @@ function openUserMenu(anchor) {
     const cols = getColumns();
     const lastColId = cols.length ? cols[cols.length - 1].id : null;
     const done = getAllTasks().filter(t => t.state === lastColId).length;
+    const u = getUser();
 
     const pop = document.createElement('div');
     pop.className = 'popover';
     pop.id = 'activePopover';
     pop.innerHTML = `
-        <div class="popover-title">הפרופיל שלי</div>
+        <div class="popover-title">${escapeHtml(u.name)}</div>
         <div class="popover-stats">
             <div class="stat"><div class="stat-num">${projects}</div><div class="stat-label">פרויקטים</div></div>
             <div class="stat"><div class="stat-num">${tasks}</div><div class="stat-label">משימות</div></div>
             <div class="stat"><div class="stat-num">${done}</div><div class="stat-label">הושלמו</div></div>
         </div>
         <div class="popover-menu">
+            <button class="popover-menu-item" type="button" onclick="openUserProfileModal()">👤 ערוך פרופיל</button>
             <button class="popover-menu-item" type="button" onclick="exportData()">📥 ייצא נתונים</button>
             <button class="popover-menu-item" type="button" onclick="showBackupInfo()">💾 פרטי גיבוי</button>
         </div>
@@ -1112,6 +1242,14 @@ function setupEventListeners() {
     if (bellBtn) bellBtn.addEventListener('click', (e) => { e.stopPropagation(); openNotificationsMenu(bellBtn); });
     if (settingsBtn) settingsBtn.addEventListener('click', (e) => { e.stopPropagation(); openSettingsMenu(settingsBtn); });
 
+    // Top avatar click → edit profile
+    const topAvatar = document.querySelector('.topbar > .avatar');
+    if (topAvatar) {
+        topAvatar.style.cursor = 'pointer';
+        topAvatar.title = 'ערוך פרופיל';
+        topAvatar.addEventListener('click', (e) => { e.stopPropagation(); openUserProfileModal(); });
+    }
+
     // User card more
     const userMore = document.querySelector('.user-card .icon-btn-small');
     if (userMore) userMore.addEventListener('click', (e) => { e.stopPropagation(); openUserMenu(userMore); });
@@ -1184,6 +1322,8 @@ window.deleteTask = deleteTask;
 window.openEditModal = openEditModal;
 window.saveTaskFromModal = saveTaskFromModal;
 window.closeModal = closeModal;
+window.openUserProfileModal = openUserProfileModal;
+window.saveUserFromModal = saveUserFromModal;
 window.setFilter = setFilter;
 window.setSort = setSort;
 window.clearFilters = clearFilters;
