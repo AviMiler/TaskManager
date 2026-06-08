@@ -207,11 +207,7 @@ function addTask(data) {
         dueIn: data.dueIn !== undefined ? data.dueIn : null,
         comments: 0,
         attachments: 0,
-        steps: (data.steps || DEFAULT_STEPS).map((s, idx) => ({
-            id: idx,
-            text: s,
-            completed: false
-        })),
+        steps: normalizeSteps(data.steps),
         createdAt: new Date().toISOString()
     };
 
@@ -237,7 +233,7 @@ function updateTask(id, data) {
         task.due = escapeHtml(data.due.trim());
         task.dueIn = data.dueIn !== undefined ? data.dueIn : null;
     }
-    if (data.steps !== undefined) task.steps = data.steps;
+    if (data.steps !== undefined) task.steps = normalizeSteps(data.steps);
 
     saveTasks(tasks);
     loadProjects();
@@ -1082,6 +1078,20 @@ function unescapeForInput(text) {
         .replace(/&gt;/g, '>')
         .replace(/&quot;/g, '"')
         .replace(/&#039;/g, "'");
+}
+
+function normalizeSteps(input) {
+    const source = (input && input.length) ? input : DEFAULT_STEPS;
+    return source.map((s, idx) => {
+        if (typeof s === 'string') {
+            return { id: idx, text: escapeHtml(s), completed: false };
+        }
+        return {
+            id: idx,
+            text: escapeHtml(String(s.text || '')),
+            completed: !!s.completed
+        };
+    });
 }
 
 function nameHue(name) {
