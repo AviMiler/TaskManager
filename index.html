@@ -66,9 +66,20 @@
                     </div>
                 </div>
 
-                <!-- Tasks List -->
-                <div class="tasks-list" id="tasksList">
-                    <!-- Tasks will be added here dynamically -->
+                <!-- Kanban Board -->
+                <div class="kanban-board" id="kanbanBoard" style="display: none;">
+                    <div class="kanban-column">
+                        <div class="column-header todo">לביצוע</div>
+                        <div class="tasks-column" id="tasksColumn-todo"></div>
+                    </div>
+                    <div class="kanban-column">
+                        <div class="column-header in-progress">בביצוע</div>
+                        <div class="tasks-column" id="tasksColumn-in-progress"></div>
+                    </div>
+                    <div class="kanban-column">
+                        <div class="column-header done">בוצע</div>
+                        <div class="tasks-column" id="tasksColumn-done"></div>
+                    </div>
                 </div>
 
                 <!-- Empty State -->

@@ -209,6 +209,7 @@ function addTask(title, description = '') {
         projectId: currentProjectId,
         title: escapeHtml(title),
         description: escapeHtml(description),
+        status: 'todo', // לביצוע, בביצוע, בוצע
         completed: false,
         createdAt: new Date().toISOString()
     };
@@ -244,6 +245,21 @@ function toggleTask(id) {
     }
 }
 
+function updateTaskStatus(id, newStatus) {
+    const tasks = getAllTasks();
+    const task = tasks.find(t => t.id === id);
+    if (task) {
+        task.status = newStatus;
+        if (newStatus === 'done') {
+            task.completed = true;
+        } else {
+            task.completed = false;
+        }
+        saveTasks(tasks);
+        loadTasks();
+    }
+}
+
 function updateTask(id, title, description) {
     const tasks = getAllTasks();
     const task = tasks.find(t => t.id === id);
@@ -256,44 +272,52 @@ function updateTask(id, title, description) {
 }
 
 function loadTasks() {
-    const tasksList = document.getElementById('tasksList');
+    const kanbanBoard = document.getElementById('kanbanBoard');
     const emptyState = document.getElementById('emptyState');
 
     if (!currentProjectId) {
-        tasksList.innerHTML = '';
+        kanbanBoard.style.display = 'none';
         emptyState.style.display = 'flex';
         return;
     }
 
     const tasks = getTasks(currentProjectId);
-    tasksList.innerHTML = '';
+    kanbanBoard.style.display = 'flex';
     emptyState.style.display = 'none';
 
     if (tasks.length === 0) {
-        tasksList.innerHTML = '<div style="text-align: center; color: #9ca3af; padding: 40px;">אין משימות עדיין. הוסף משימה חדשה!</div>';
+        document.getElementById('tasksColumn-todo').innerHTML = '<div style="text-align: center; color: #9ca3af; padding: 20px; font-size: 12px;">אין משימות עדיין</div>';
+        document.getElementById('tasksColumn-in-progress').innerHTML = '';
+        document.getElementById('tasksColumn-done').innerHTML = '';
         return;
     }
 
-    tasks.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).forEach(task => {
+    // Clear all columns
+    document.getElementById('tasksColumn-todo').innerHTML = '';
+    document.getElementById('tasksColumn-in-progress').innerHTML = '';
+    document.getElementById('tasksColumn-done').innerHTML = '';
+
+    // Distribute tasks by status
+    tasks.forEach(task => {
+        const columnId = `tasksColumn-${task.status || 'todo'}`;
+        const column = document.getElementById(columnId);
+
+        if (!column) return;
+
         const taskEl = document.createElement('div');
-        taskEl.className = `task-item ${task.completed ? 'completed' : ''}`;
+        taskEl.className = `kanban-task ${task.completed ? 'completed' : ''}`;
         taskEl.innerHTML = `
-            <input
-                type="checkbox"
-                class="task-checkbox"
-                ${task.completed ? 'checked' : ''}
-                onchange="toggleTask(${task.id})"
-            >
-            <div class="task-content">
-                <div class="task-title">${task.title}</div>
-                ${task.description ? `<div class="task-description">${task.description}</div>` : ''}
-            </div>
-            <div class="task-actions">
+            <div class="kanban-task-title">${task.title}</div>
+            ${task.description ? `<div class="kanban-task-description">${task.description}</div>` : ''}
+            <div class="kanban-task-actions">
+                <button class="status-btn ${task.status === 'todo' ? 'active' : ''}" onclick="updateTaskStatus(${task.id}, 'todo')">לביצוע</button>
+                <button class="status-btn ${task.status === 'in-progress' ? 'active' : ''}" onclick="updateTaskStatus(${task.id}, 'in-progress')">בביצוע</button>
+                <button class="status-btn ${task.status === 'done' ? 'active' : ''}" onclick="updateTaskStatus(${task.id}, 'done')">בוצע</button>
                 <button class="task-btn" onclick="openEditModal(${task.id}, '${escapeAttr(task.title)}', '${escapeAttr(task.description)}')">✏️</button>
                 <button class="task-btn delete" onclick="deleteTask(${task.id})">🗑️</button>
             </div>
         `;
-        tasksList.appendChild(taskEl);
+        column.appendChild(taskEl);
     });
 }
 

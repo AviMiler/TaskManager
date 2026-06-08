@@ -341,6 +341,116 @@ body {
     color: var(--danger);
 }
 
+/* Kanban Board */
+.kanban-board {
+    flex: 1;
+    display: flex;
+    gap: 16px;
+    overflow-x: auto;
+    padding: 20px;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.03) 0%, rgba(139, 92, 246, 0.03) 100%);
+}
+
+.kanban-column {
+    flex: 0 0 320px;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-light);
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+}
+
+.column-header {
+    padding: 12px 16px;
+    font-weight: 600;
+    color: white;
+    text-align: center;
+    font-size: 14px;
+}
+
+.column-header.todo {
+    background: #ef4444;
+}
+
+.column-header.in-progress {
+    background: #f59e0b;
+}
+
+.column-header.done {
+    background: #10b981;
+}
+
+.tasks-column {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.kanban-task {
+    background: var(--bg-white);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px;
+    cursor: grab;
+    transition: all 0.2s;
+}
+
+.kanban-task:hover {
+    box-shadow: var(--shadow);
+    border-color: var(--primary);
+}
+
+.kanban-task:active {
+    cursor: grabbing;
+}
+
+.kanban-task.completed {
+    opacity: 0.6;
+    border-color: var(--success);
+}
+
+.kanban-task-title {
+    font-weight: 500;
+    margin-bottom: 6px;
+    color: var(--text-dark);
+}
+
+.kanban-task-description {
+    font-size: 12px;
+    color: var(--text-gray);
+    margin-bottom: 8px;
+}
+
+.kanban-task-actions {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.status-btn {
+    padding: 4px 8px;
+    font-size: 11px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--bg-light);
+    color: var(--text-gray);
+}
+
+.status-btn:hover {
+    background: var(--border);
+}
+
+.status-btn.active {
+    background: var(--primary);
+    color: white;
+}
+
 /* Empty State */
 .empty-state {
     flex: 1;
