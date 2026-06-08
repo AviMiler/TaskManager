@@ -560,25 +560,12 @@ input {
     border-color: var(--state-dot);
 }
 
-.kanban-column[data-state="todo"] {
-    --state-c: var(--todo-c);
-    --state-bg: var(--todo-bg);
-    --state-tint: var(--todo-tint);
-    --state-dot: var(--todo-dot);
-}
-
-.kanban-column[data-state="doing"] {
-    --state-c: var(--doing-c);
-    --state-bg: var(--doing-bg);
-    --state-tint: var(--doing-tint);
-    --state-dot: var(--doing-dot);
-}
-
-.kanban-column[data-state="done"] {
-    --state-c: var(--done-c);
-    --state-bg: var(--done-bg);
-    --state-tint: var(--done-tint);
-    --state-dot: var(--done-dot);
+.kanban-column {
+    --col-hue: 220;
+    --state-c:   hsl(var(--col-hue), 55%, 35%);
+    --state-bg:  hsl(var(--col-hue), 65%, 92%);
+    --state-tint: hsl(var(--col-hue), 60%, 97%);
+    --state-dot: hsl(var(--col-hue), 60%, 50%);
 }
 
 .column-header {
@@ -636,6 +623,56 @@ input {
     color: var(--ink);
 }
 
+.column-delete-btn {
+    width: 22px;
+    height: 22px;
+    border: none;
+    background: transparent;
+    color: var(--ink-f);
+    border-radius: var(--r-sm);
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.15s, background 0.15s, color 0.15s;
+}
+
+.kanban-column:hover .column-delete-btn {
+    opacity: 1;
+}
+
+.column-delete-btn:hover {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+.add-column-btn {
+    align-self: start;
+    min-width: 200px;
+    height: 44px;
+    margin-top: 0;
+    background: transparent;
+    border: 2px dashed var(--line);
+    border-radius: var(--r-xl);
+    color: var(--ink-f);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.add-column-btn:hover {
+    border-color: var(--blue);
+    color: var(--blue);
+    background: var(--surface);
+}
+
 .column-body {
     padding: 10px;
     display: flex;
@@ -684,9 +721,10 @@ input {
     opacity: 0.4;
 }
 
-.card[data-state="todo"] { --card-stripe: var(--todo-dot); }
-.card[data-state="doing"] { --card-stripe: var(--doing-dot); }
-.card[data-state="done"] { --card-stripe: var(--done-dot); }
+.card {
+    --col-hue: 220;
+    --card-stripe: hsl(var(--col-hue), 60%, 50%);
+}
 
 .card-stripe {
     position: absolute;
@@ -1011,86 +1049,6 @@ input {
     background: var(--blue-d);
 }
 
-.btn-small {
-    padding: 6px 12px;
-    font-size: 12px;
-}
-
-/* ===== Steps ===== */
-.steps-container {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding: 8px 0;
-}
-
-.step-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 10px;
-    border: 1px solid var(--line);
-    border-radius: var(--r-md);
-    background: var(--surface);
-    transition: background 0.15s;
-}
-
-.step-item:hover {
-    background: var(--bg);
-}
-
-.step-checkbox {
-    flex-shrink: 0;
-    width: 18px;
-    height: 18px;
-    cursor: pointer;
-    accent-color: var(--blue);
-}
-
-.step-text {
-    flex: 1;
-    border: none;
-    background: transparent;
-    font-size: 13px;
-    color: var(--ink);
-    padding: 0;
-    font-family: inherit;
-    outline: none;
-}
-
-.step-text:focus {
-    outline: none;
-}
-
-.step-delete-btn {
-    flex-shrink: 0;
-    width: 24px;
-    height: 24px;
-    border: none;
-    background: transparent;
-    color: var(--ink-f);
-    font-size: 16px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: var(--r-sm);
-    transition: background 0.15s, color 0.15s;
-}
-
-.step-delete-btn:hover {
-    background: var(--line);
-    color: var(--ink-s);
-}
-
-/* ===== Card Steps Progress ===== */
-.card-steps-progress {
-    font-size: 11px;
-    color: var(--ink-f);
-    padding: 4px 0;
-    font-weight: 500;
-}
-
 /* ===== Scrollbars ===== */
 ::-webkit-scrollbar {
     width: 8px;
@@ -1407,6 +1365,7 @@ input {
     border-radius: var(--r-sm);
 }
 
-.state-todo { background: var(--todo-bg); color: var(--todo-c); }
-.state-doing { background: var(--doing-bg); color: var(--doing-c); }
-.state-done { background: var(--done-bg); color: var(--done-c); }
+.state-pill {
+    background: hsl(var(--col-hue, 220), 65%, 92%);
+    color: hsl(var(--col-hue, 220), 55%, 35%);
+}

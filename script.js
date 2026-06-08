@@ -3,7 +3,8 @@ const DB = {
     projects: 'tb_projects',
     tasks: 'tb_tasks',
     backup: 'tb_backup',
-    currentProject: 'tb_currentProject'
+    currentProject: 'tb_currentProject',
+    columns: 'tb_columns'
 };
 
 let currentProjectId = null;
@@ -20,8 +21,13 @@ const HUES = [230, 160, 40, 290, 0, 60, 120, 180, 260, 320];
 // Tag colors known (Hebrew)
 const KNOWN_TAGS = ['מסמכים', 'פגישה', 'פנימי', 'bug', 'feature'];
 
-// Default task steps
-const DEFAULT_STEPS = ['לביצוע', 'בביצוע', 'בבדיקות', 'בוצע'];
+// Default kanban columns
+const DEFAULT_COLUMNS = [
+    { id: 'todo',    name: 'To Do',    hue: 220 },
+    { id: 'doing',   name: 'Active',   hue: 210 },
+    { id: 'testing', name: 'בבדיקות',  hue: 35  },
+    { id: 'done',    name: 'Closed',   hue: 145 }
+];
 
 // ===== Init =====
 document.addEventListener('DOMContentLoaded', () => {
@@ -70,6 +76,69 @@ function createBackup() {
         timestamp: new Date().toISOString()
     };
     localStorage.setItem(DB.backup, JSON.stringify(backup));
+}
+
+function getColumns() {
+    const d = localStorage.getItem(DB.columns);
+    if (!d) {
+        saveColumns(DEFAULT_COLUMNS);
+        return DEFAULT_COLUMNS.slice();
+    }
+    try {
+        const cols = JSON.parse(d);
+        if (Array.isArray(cols) && cols.length > 0) return cols;
+    } catch (e) {}
+    saveColumns(DEFAULT_COLUMNS);
+    return DEFAULT_COLUMNS.slice();
+}
+
+function saveColumns(columns) {
+    localStorage.setItem(DB.columns, JSON.stringify(columns));
+    createBackup();
+}
+
+function addColumn(name) {
+    name = (name || '').trim();
+    if (!name) return;
+    const columns = getColumns();
+    const safeName = escapeHtml(name);
+    if (columns.find(c => c.name === safeName)) {
+        alert('עמודה עם שם זה כבר קיימת');
+        return;
+    }
+    const id = 'col_' + Date.now();
+    columns.push({ id, name: safeName, hue: (columns.length * 47) % 360 });
+    saveColumns(columns);
+    renderKanban();
+}
+
+function deleteColumn(id) {
+    const columns = getColumns();
+    const col = columns.find(c => c.id === id);
+    if (!col) return;
+    const tasksInColumn = getAllTasks().filter(t => t.state === id).length;
+    if (tasksInColumn > 0) {
+        alert(`לא ניתן למחוק את העמודה "${unescapeForInput(col.name)}" - יש בה ${tasksInColumn} משימות.\nהעבר אותן לעמודה אחרת לפני המחיקה.`);
+        return;
+    }
+    if (columns.length <= 1) {
+        alert('חייבת להיות לפחות עמודה אחת');
+        return;
+    }
+    if (!confirm(`למחוק את העמודה "${unescapeForInput(col.name)}"?`)) return;
+    saveColumns(columns.filter(c => c.id !== id));
+    renderKanban();
+}
+
+function renameColumn(id, newName) {
+    newName = (newName || '').trim();
+    if (!newName) return;
+    const columns = getColumns();
+    const col = columns.find(c => c.id === id);
+    if (!col) return;
+    col.name = escapeHtml(newName);
+    saveColumns(columns);
+    renderKanban();
 }
 
 function getCurrentProjectId() {
@@ -164,8 +233,10 @@ function loadProjects() {
         return;
     }
 
+    const cols = getColumns();
+    const lastColId = cols.length ? cols[cols.length - 1].id : null;
     projects.forEach((p) => {
-        const taskCount = getTasks(p.id).filter(t => t.state !== 'done').length;
+        const taskCount = getTasks(p.id).filter(t => t.state !== lastColId).length;
         const isActive = p.id === currentProjectId;
         const hue = HUES[p.hueIdx || 0];
 
@@ -207,7 +278,6 @@ function addTask(data) {
         dueIn: data.dueIn !== undefined ? data.dueIn : null,
         comments: 0,
         attachments: 0,
-        steps: normalizeSteps(data.steps),
         createdAt: new Date().toISOString()
     };
 
@@ -233,8 +303,6 @@ function updateTask(id, data) {
         task.due = escapeHtml(data.due.trim());
         task.dueIn = data.dueIn !== undefined ? data.dueIn : null;
     }
-    if (data.steps !== undefined) task.steps = normalizeSteps(data.steps);
-
     saveTasks(tasks);
     loadProjects();
     renderKanban();
@@ -256,35 +324,88 @@ function moveTask(id, newState) {
 
 // ===== Kanban Rendering =====
 function renderKanban() {
-    if (!currentProjectId) return;
-    const tasks = applyFiltersAndSort(getTasks(currentProjectId));
+    const board = document.getElementById('kanbanBoard');
+    if (!board) return;
 
-    const states = ['todo', 'doing', 'done'];
-    states.forEach(state => {
-        const col = document.getElementById(`column-${state}`);
-        const stateTasks = tasks.filter(t => t.state === state);
+    const columns = getColumns();
+    board.innerHTML = '';
+    board.style.gridTemplateColumns = `repeat(${columns.length}, minmax(260px, 1fr)) auto`;
 
-        const colCount = document.querySelector(`.kanban-column[data-state="${state}"] .column-count`);
-        colCount.textContent = stateTasks.length;
+    const tasks = currentProjectId ? applyFiltersAndSort(getTasks(currentProjectId)) : [];
 
-        col.innerHTML = '';
+    columns.forEach(col => {
+        const colEl = document.createElement('div');
+        colEl.className = 'kanban-column';
+        colEl.dataset.state = col.id;
+        colEl.style.setProperty('--col-hue', col.hue);
 
-        if (stateTasks.length === 0) {
-            col.innerHTML = '<div class="column-empty">גרור משימה לכאן</div>';
-            return;
+        const colTasks = tasks.filter(t => t.state === col.id);
+
+        colEl.innerHTML = `
+            <div class="column-header">
+                <span class="column-dot"></span>
+                <span class="column-title" title="לחץ פעמיים לשינוי שם">${col.name}</span>
+                <span class="column-count">${colTasks.length}</span>
+                <button class="column-add-btn" type="button" aria-label="הוסף משימה לעמודה" data-col-add="${col.id}">+</button>
+                <button class="column-delete-btn" type="button" aria-label="מחק עמודה" data-col-del="${col.id}" title="מחק עמודה">×</button>
+            </div>
+            <div class="column-body" id="column-${col.id}"></div>
+        `;
+
+        board.appendChild(colEl);
+
+        const body = colEl.querySelector('.column-body');
+        if (colTasks.length === 0) {
+            body.innerHTML = '<div class="column-empty">גרור משימה לכאן</div>';
+        } else {
+            colTasks.forEach(task => body.appendChild(buildCard(task)));
         }
 
-        stateTasks.forEach(task => {
-            col.appendChild(buildCard(task));
+        // Inline rename via dblclick
+        const titleEl = colEl.querySelector('.column-title');
+        titleEl.addEventListener('dblclick', () => {
+            const current = unescapeForInput(col.name);
+            const next = prompt('שם חדש לעמודה:', current);
+            if (next !== null && next.trim()) renameColumn(col.id, next);
         });
     });
 
+    // Add-column button at the end of the board
+    const addColBtn = document.createElement('button');
+    addColBtn.type = 'button';
+    addColBtn.className = 'add-column-btn';
+    addColBtn.setAttribute('aria-label', 'הוסף עמודה חדשה');
+    addColBtn.innerHTML = '<span>+ עמודה חדשה</span>';
+    addColBtn.addEventListener('click', () => {
+        const name = prompt('שם העמודה החדשה:');
+        if (name && name.trim()) addColumn(name);
+    });
+    board.appendChild(addColBtn);
+
+    // Wire per-column add/delete buttons
+    board.querySelectorAll('[data-col-add]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openEditModal(null, btn.dataset.colAdd);
+        });
+    });
+    board.querySelectorAll('[data-col-del]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            deleteColumn(btn.dataset.colDel);
+        });
+    });
+
+    setupColumnDragDrop();
+
     // Update subtitle
-    const total = tasks.length;
-    const done = tasks.filter(t => t.state === 'done').length;
-    const doing = tasks.filter(t => t.state === 'doing').length;
-    document.getElementById('pageSubtitle').textContent =
-        `${total} משימות · ${done} הושלמו · ${doing} בעבודה`;
+    if (currentProjectId) {
+        const total = tasks.length;
+        const lastColId = columns[columns.length - 1].id;
+        const done = tasks.filter(t => t.state === lastColId).length;
+        document.getElementById('pageSubtitle').textContent =
+            `${total} משימות · ${done} בעמודה האחרונה`;
+    }
 }
 
 function buildCard(task) {
@@ -293,6 +414,12 @@ function buildCard(task) {
     card.dataset.state = task.state;
     card.dataset.id = task.id;
     card.draggable = true;
+    const colHue = (getColumns().find(c => c.id === task.state) || {}).hue;
+    if (colHue !== undefined) card.style.setProperty('--col-hue', colHue);
+    const isLastCol = (() => {
+        const cols = getColumns();
+        return cols.length > 0 && cols[cols.length - 1].id === task.state;
+    })();
 
     card.addEventListener('dragstart', (e) => {
         draggingTaskId = task.id;
@@ -314,9 +441,6 @@ function buildCard(task) {
     const tagClass = KNOWN_TAGS.includes(task.tag) ? `tag-${task.tag}` : 'tag-default';
     const overdueSoon = task.dueIn !== null && task.dueIn !== undefined && task.dueIn <= 7;
     const idStr = String(task.id).padStart(4, '0');
-    const steps = task.steps || [];
-    const completedSteps = steps.filter(s => s.completed).length;
-    const stepsProgress = steps.length > 0 ? `${completedSteps}/${steps.length}` : '';
 
     card.innerHTML = `
         <span class="card-stripe"></span>
@@ -328,9 +452,8 @@ function buildCard(task) {
             ${task.tag ? `<span class="tag ${tagClass}">${task.tag}</span>` : '<span></span>'}
             <span class="card-id">#${idStr}</span>
         </div>
-        <div class="card-title ${task.state === 'done' ? 'done' : ''}">${task.title}</div>
+        <div class="card-title ${isLastCol ? 'done' : ''}">${task.title}</div>
         ${task.description ? `<div class="card-description">${task.description}</div>` : ''}
-        ${stepsProgress ? `<div class="card-steps-progress">שלבים: ${stepsProgress}</div>` : ''}
         <div class="card-meta">
             <span class="priority priority-${task.priority || 'med'}">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -417,7 +540,7 @@ function updateUI() {
 }
 
 // ===== Modal =====
-function openEditModal(taskId) {
+function openEditModal(taskId, defaultColumnId) {
     if (!currentProjectId) {
         alert('בחר פרויקט תחילה');
         return;
@@ -427,7 +550,7 @@ function openEditModal(taskId) {
     const task = taskId ? getAllTasks().find(t => t.id === taskId) : null;
     const isNew = !task;
 
-    const modal = buildModal(task, isNew);
+    const modal = buildModal(task, isNew, defaultColumnId);
     document.body.appendChild(modal);
 
     setTimeout(() => {
@@ -436,12 +559,18 @@ function openEditModal(taskId) {
     }, 50);
 }
 
-function buildModal(task, isNew) {
+function buildModal(task, isNew, defaultColumnId) {
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
     overlay.id = 'taskModal';
 
-    const t = task || { title: '', description: '', state: 'todo', priority: 'med', tag: '', assignee: '', due: '', dueIn: null };
+    const columns = getColumns();
+    const fallbackState = defaultColumnId || (columns[0] && columns[0].id) || 'todo';
+    const t = task || { title: '', description: '', state: fallbackState, priority: 'med', tag: '', assignee: '', due: '', dueIn: null };
+
+    const stateOptions = columns.map(c =>
+        `<option value="${c.id}" ${t.state === c.id ? 'selected' : ''}>${c.name}</option>`
+    ).join('');
 
     overlay.innerHTML = `
         <div class="modal" onclick="event.stopPropagation()">
@@ -462,9 +591,7 @@ function buildModal(task, isNew) {
                     <div class="field">
                         <label class="field-label">מצב</label>
                         <select id="modalState" class="field-select">
-                            <option value="todo" ${t.state === 'todo' ? 'selected' : ''}>לביצוע (To Do)</option>
-                            <option value="doing" ${t.state === 'doing' ? 'selected' : ''}>בביצוע (Active)</option>
-                            <option value="done" ${t.state === 'done' ? 'selected' : ''}>בוצע (Closed)</option>
+                            ${stateOptions}
                         </select>
                     </div>
                     <div class="field">
@@ -489,19 +616,6 @@ function buildModal(task, isNew) {
                 <div class="field">
                     <label class="field-label">תאריך יעד</label>
                     <input type="date" id="modalDueDate" class="field-input" value="${parseDueDate(t.due)}">
-                </div>
-                <div class="field">
-                    <label class="field-label">שלבים</label>
-                    <div class="steps-container" id="stepsContainer">
-                        ${(t.steps || DEFAULT_STEPS.map((s, idx) => ({ id: idx, text: s, completed: false }))).map((step, idx) => `
-                            <div class="step-item" data-step-id="${step.id}">
-                                <input type="checkbox" class="step-checkbox" ${step.completed ? 'checked' : ''} onchange="updateStepCompletion(${idx}, this.checked)">
-                                <input type="text" class="step-text" value="${unescapeForInput(step.text)}" onchange="updateStepText(${idx}, this.value)" placeholder="שם השלב">
-                                <button type="button" class="step-delete-btn" onclick="deleteStepField(${idx})">×</button>
-                            </div>
-                        `).join('')}
-                    </div>
-                    <button type="button" class="btn-secondary btn-small" onclick="addStepField()">+ הוסף שלב</button>
                 </div>
             </div>
             <div class="modal-footer">
@@ -551,13 +665,6 @@ function saveTaskFromModal(taskId) {
     // Store ISO date as the "due" so we can re-edit; display via formatter
     const dueDisplay = isoDate ? formatDueDate(isoDate).display.split('|')[0] : '';
 
-    const stepsContainer = document.getElementById('stepsContainer');
-    const steps = Array.from(stepsContainer.querySelectorAll('.step-item')).map((item, idx) => ({
-        id: idx,
-        text: item.querySelector('.step-text').value || '',
-        completed: item.querySelector('.step-checkbox').checked
-    })).filter(s => s.text.trim());
-
     const data = {
         title: title,
         description: document.getElementById('modalDescription').value,
@@ -566,8 +673,7 @@ function saveTaskFromModal(taskId) {
         tag: document.getElementById('modalTag').value,
         assignee: document.getElementById('modalAssignee').value,
         due: isoDate ? dueDisplay : '',
-        dueIn: dueInfo.dueIn,
-        steps: steps
+        dueIn: dueInfo.dueIn
     };
 
     if (taskId === null || taskId === undefined) {
@@ -577,38 +683,6 @@ function saveTaskFromModal(taskId) {
     }
 
     closeModal();
-}
-
-function addStepField() {
-    const container = document.getElementById('stepsContainer');
-    const items = container.querySelectorAll('.step-item');
-    const newIdx = items.length;
-
-    const stepDiv = document.createElement('div');
-    stepDiv.className = 'step-item';
-    stepDiv.innerHTML = `
-        <input type="checkbox" class="step-checkbox">
-        <input type="text" class="step-text" placeholder="שם השלב">
-        <button type="button" class="step-delete-btn" onclick="deleteStepField(${newIdx})">×</button>
-    `;
-
-    container.appendChild(stepDiv);
-}
-
-function deleteStepField(idx) {
-    const container = document.getElementById('stepsContainer');
-    const items = container.querySelectorAll('.step-item');
-    if (items[idx]) {
-        items[idx].remove();
-    }
-}
-
-function updateStepText(idx, text) {
-    // This function is for future enhancements
-}
-
-function updateStepCompletion(idx, completed) {
-    // This function is for future enhancements
 }
 
 function closeModal() {
@@ -669,7 +743,16 @@ function renderList() {
         return;
     }
 
-    const stateLabels = { todo: 'לביצוע', doing: 'בביצוע', done: 'בוצע' };
+    const columns = getColumns();
+    const stateLabel = (id) => {
+        const c = columns.find(x => x.id === id);
+        return c ? c.name : id;
+    };
+    const stateHue = (id) => {
+        const c = columns.find(x => x.id === id);
+        return c ? c.hue : 220;
+    };
+    const lastColId = columns.length ? columns[columns.length - 1].id : null;
     const priLabels = { high: 'גבוה', med: 'בינוני', low: 'נמוך' };
 
     list.innerHTML = `
@@ -688,10 +771,10 @@ function renderList() {
             </thead>
             <tbody>
                 ${tasks.map(t => `
-                    <tr data-id="${t.id}" class="list-row ${t.state === 'done' ? 'done' : ''}">
+                    <tr data-id="${t.id}" class="list-row ${t.state === lastColId ? 'done' : ''}">
                         <td class="list-id">#${String(t.id).padStart(4, '0')}</td>
                         <td class="list-title">${t.title}</td>
-                        <td><span class="state-pill state-${t.state}">${stateLabels[t.state] || t.state}</span></td>
+                        <td><span class="state-pill" style="--col-hue: ${stateHue(t.state)};">${stateLabel(t.state)}</span></td>
                         <td><span class="priority priority-${t.priority || 'med'}">${priLabels[t.priority] || 'בינוני'}</span></td>
                         <td>${t.tag ? `<span class="tag tag-${KNOWN_TAGS.includes(t.tag) ? t.tag : 'default'}">${t.tag}</span>` : ''}</td>
                         <td>${t.assignee ? `<div class="avatar avatar-sm" style="--hue: ${nameHue(t.assignee)};" title="${t.assignee}">${initials(t.assignee)}</div>` : ''}</td>
@@ -863,7 +946,9 @@ function rerenderCurrentView() {
 function openNotificationsMenu(anchor) {
     closePopovers();
     const tasks = getAllTasks();
-    const overdue = tasks.filter(t => t.state !== 'done' && t.dueIn !== null && t.dueIn !== undefined && t.dueIn <= 7);
+    const cols = getColumns();
+    const lastColId = cols.length ? cols[cols.length - 1].id : null;
+    const overdue = tasks.filter(t => t.state !== lastColId && t.dueIn !== null && t.dueIn !== undefined && t.dueIn <= 7);
 
     const pop = document.createElement('div');
     pop.className = 'popover';
@@ -916,7 +1001,9 @@ function openUserMenu(anchor) {
     closePopovers();
     const projects = getProjects().length;
     const tasks = getAllTasks().length;
-    const done = getAllTasks().filter(t => t.state === 'done').length;
+    const cols = getColumns();
+    const lastColId = cols.length ? cols[cols.length - 1].id : null;
+    const done = getAllTasks().filter(t => t.state === lastColId).length;
 
     const pop = document.createElement('div');
     pop.className = 'popover';
@@ -1008,11 +1095,6 @@ function setupEventListeners() {
     // Add task
     document.querySelector('.add-task-btn').addEventListener('click', () => openEditModal(null));
 
-    // Column add buttons
-    document.querySelectorAll('.column-add-btn').forEach(btn => {
-        btn.addEventListener('click', () => openEditModal(null));
-    });
-
     // View tabs
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.addEventListener('click', () => setView(btn.dataset.view));
@@ -1053,7 +1135,6 @@ function setupEventListeners() {
         }
     });
 
-    setupColumnDragDrop();
     setupSearch();
 }
 
@@ -1078,20 +1159,6 @@ function unescapeForInput(text) {
         .replace(/&gt;/g, '>')
         .replace(/&quot;/g, '"')
         .replace(/&#039;/g, "'");
-}
-
-function normalizeSteps(input) {
-    const source = (input && input.length) ? input : DEFAULT_STEPS;
-    return source.map((s, idx) => {
-        if (typeof s === 'string') {
-            return { id: idx, text: escapeHtml(s), completed: false };
-        }
-        return {
-            id: idx,
-            text: escapeHtml(String(s.text || '')),
-            completed: !!s.completed
-        };
-    });
 }
 
 function nameHue(name) {
@@ -1125,7 +1192,3 @@ window.exportData = exportData;
 window.showBackupInfo = showBackupInfo;
 window.clearAllData = clearAllData;
 window.jumpToTask = jumpToTask;
-window.addStepField = addStepField;
-window.deleteStepField = deleteStepField;
-window.updateStepText = updateStepText;
-window.updateStepCompletion = updateStepCompletion;

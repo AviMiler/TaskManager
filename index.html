@@ -113,36 +113,8 @@
                     </div>
                 </div>
 
-                <!-- Kanban Board -->
-                <div class="kanban-board" id="kanbanBoard">
-                    <div class="kanban-column" data-state="todo">
-                        <div class="column-header">
-                            <span class="column-dot"></span>
-                            <span class="column-title">To Do</span>
-                            <span class="column-count">0</span>
-                            <button class="column-add-btn" type="button" aria-label="הוסף משימה לעמודה">+</button>
-                        </div>
-                        <div class="column-body" id="column-todo"></div>
-                    </div>
-                    <div class="kanban-column" data-state="doing">
-                        <div class="column-header">
-                            <span class="column-dot"></span>
-                            <span class="column-title">Active</span>
-                            <span class="column-count">0</span>
-                            <button class="column-add-btn" type="button" aria-label="הוסף משימה לעמודה">+</button>
-                        </div>
-                        <div class="column-body" id="column-doing"></div>
-                    </div>
-                    <div class="kanban-column" data-state="done">
-                        <div class="column-header">
-                            <span class="column-dot"></span>
-                            <span class="column-title">Closed</span>
-                            <span class="column-count">0</span>
-                            <button class="column-add-btn" type="button" aria-label="הוסף משימה לעמודה">+</button>
-                        </div>
-                        <div class="column-body" id="column-done"></div>
-                    </div>
-                </div>
+                <!-- Kanban Board (columns rendered dynamically) -->
+                <div class="kanban-board" id="kanbanBoard"></div>
 
                 <!-- Empty State -->
                 <div class="empty-state" id="emptyState">
