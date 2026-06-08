@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Manager</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📋 Task Manager</h1>
+        </header>
+
+        <div class="main-content">
+            <div class="projects-panel">
+                <h2>פרוייקטים</h2>
+                <div class="add-project">
+                    <input type="text" id="projectName" placeholder="שם פרוייקט חדש">
+                    <button onclick="addProject()">➕ הוסף</button>
+                </div>
+                <div id="projectsList" class="projects-list"></div>
+            </div>
+
+            <div class="tasks-panel">
+                <div id="noProject" class="no-project">
+                    <p>בחר פרוייקט כדי לראות משימות</p>
+                </div>
+                <div id="projectContent" style="display: none;">
+                    <h2 id="projectTitle"></h2>
+                    <div class="add-task">
+                        <input type="text" id="taskTitle" placeholder="כותרת משימה">
+                        <textarea id="taskDescription" placeholder="תיאור (אופציונלי)"></textarea>
+                        <button onclick="addTask()">➕ הוסף משימה</button>
+                    </div>
+                    <div id="tasksList" class="tasks-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
