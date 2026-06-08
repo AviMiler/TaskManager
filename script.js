@@ -20,6 +20,9 @@ const HUES = [230, 160, 40, 290, 0, 60, 120, 180, 260, 320];
 // Tag colors known (Hebrew)
 const KNOWN_TAGS = ['מסמכים', 'פגישה', 'פנימי', 'bug', 'feature'];
 
+// Default task steps
+const DEFAULT_STEPS = ['לביצוע', 'בביצוע', 'בבדיקות', 'בוצע'];
+
 // ===== Init =====
 document.addEventListener('DOMContentLoaded', () => {
     initNextTaskId();
@@ -204,6 +207,11 @@ function addTask(data) {
         dueIn: data.dueIn !== undefined ? data.dueIn : null,
         comments: 0,
         attachments: 0,
+        steps: (data.steps || DEFAULT_STEPS).map((s, idx) => ({
+            id: idx,
+            text: s,
+            completed: false
+        })),
         createdAt: new Date().toISOString()
     };
 
@@ -229,6 +237,7 @@ function updateTask(id, data) {
         task.due = escapeHtml(data.due.trim());
         task.dueIn = data.dueIn !== undefined ? data.dueIn : null;
     }
+    if (data.steps !== undefined) task.steps = data.steps;
 
     saveTasks(tasks);
     loadProjects();
@@ -309,6 +318,9 @@ function buildCard(task) {
     const tagClass = KNOWN_TAGS.includes(task.tag) ? `tag-${task.tag}` : 'tag-default';
     const overdueSoon = task.dueIn !== null && task.dueIn !== undefined && task.dueIn <= 7;
     const idStr = String(task.id).padStart(4, '0');
+    const steps = task.steps || [];
+    const completedSteps = steps.filter(s => s.completed).length;
+    const stepsProgress = steps.length > 0 ? `${completedSteps}/${steps.length}` : '';
 
     card.innerHTML = `
         <span class="card-stripe"></span>
@@ -322,6 +334,7 @@ function buildCard(task) {
         </div>
         <div class="card-title ${task.state === 'done' ? 'done' : ''}">${task.title}</div>
         ${task.description ? `<div class="card-description">${task.description}</div>` : ''}
+        ${stepsProgress ? `<div class="card-steps-progress">שלבים: ${stepsProgress}</div>` : ''}
         <div class="card-meta">
             <span class="priority priority-${task.priority || 'med'}">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -481,6 +494,19 @@ function buildModal(task, isNew) {
                     <label class="field-label">תאריך יעד</label>
                     <input type="date" id="modalDueDate" class="field-input" value="${parseDueDate(t.due)}">
                 </div>
+                <div class="field">
+                    <label class="field-label">שלבים</label>
+                    <div class="steps-container" id="stepsContainer">
+                        ${(t.steps || DEFAULT_STEPS.map((s, idx) => ({ id: idx, text: s, completed: false }))).map((step, idx) => `
+                            <div class="step-item" data-step-id="${step.id}">
+                                <input type="checkbox" class="step-checkbox" ${step.completed ? 'checked' : ''} onchange="updateStepCompletion(${idx}, this.checked)">
+                                <input type="text" class="step-text" value="${unescapeForInput(step.text)}" onchange="updateStepText(${idx}, this.value)" placeholder="שם השלב">
+                                <button type="button" class="step-delete-btn" onclick="deleteStepField(${idx})">×</button>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <button type="button" class="btn-secondary btn-small" onclick="addStepField()">+ הוסף שלב</button>
+                </div>
             </div>
             <div class="modal-footer">
                 <button class="btn-secondary" onclick="closeModal()">ביטול</button>
@@ -529,6 +555,13 @@ function saveTaskFromModal(taskId) {
     // Store ISO date as the "due" so we can re-edit; display via formatter
     const dueDisplay = isoDate ? formatDueDate(isoDate).display.split('|')[0] : '';
 
+    const stepsContainer = document.getElementById('stepsContainer');
+    const steps = Array.from(stepsContainer.querySelectorAll('.step-item')).map((item, idx) => ({
+        id: idx,
+        text: item.querySelector('.step-text').value || '',
+        completed: item.querySelector('.step-checkbox').checked
+    })).filter(s => s.text.trim());
+
     const data = {
         title: title,
         description: document.getElementById('modalDescription').value,
@@ -537,7 +570,8 @@ function saveTaskFromModal(taskId) {
         tag: document.getElementById('modalTag').value,
         assignee: document.getElementById('modalAssignee').value,
         due: isoDate ? dueDisplay : '',
-        dueIn: dueInfo.dueIn
+        dueIn: dueInfo.dueIn,
+        steps: steps
     };
 
     if (taskId === null || taskId === undefined) {
@@ -547,6 +581,38 @@ function saveTaskFromModal(taskId) {
     }
 
     closeModal();
+}
+
+function addStepField() {
+    const container = document.getElementById('stepsContainer');
+    const items = container.querySelectorAll('.step-item');
+    const newIdx = items.length;
+
+    const stepDiv = document.createElement('div');
+    stepDiv.className = 'step-item';
+    stepDiv.innerHTML = `
+        <input type="checkbox" class="step-checkbox">
+        <input type="text" class="step-text" placeholder="שם השלב">
+        <button type="button" class="step-delete-btn" onclick="deleteStepField(${newIdx})">×</button>
+    `;
+
+    container.appendChild(stepDiv);
+}
+
+function deleteStepField(idx) {
+    const container = document.getElementById('stepsContainer');
+    const items = container.querySelectorAll('.step-item');
+    if (items[idx]) {
+        items[idx].remove();
+    }
+}
+
+function updateStepText(idx, text) {
+    // This function is for future enhancements
+}
+
+function updateStepCompletion(idx, completed) {
+    // This function is for future enhancements
 }
 
 function closeModal() {
@@ -1049,3 +1115,7 @@ window.exportData = exportData;
 window.showBackupInfo = showBackupInfo;
 window.clearAllData = clearAllData;
 window.jumpToTask = jumpToTask;
+window.addStepField = addStepField;
+window.deleteStepField = deleteStepField;
+window.updateStepText = updateStepText;
+window.updateStepCompletion = updateStepCompletion;

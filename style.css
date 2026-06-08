@@ -1011,6 +1011,86 @@ input {
     background: var(--blue-d);
 }
 
+.btn-small {
+    padding: 6px 12px;
+    font-size: 12px;
+}
+
+/* ===== Steps ===== */
+.steps-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px 0;
+}
+
+.step-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    background: var(--surface);
+    transition: background 0.15s;
+}
+
+.step-item:hover {
+    background: var(--bg);
+}
+
+.step-checkbox {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: var(--blue);
+}
+
+.step-text {
+    flex: 1;
+    border: none;
+    background: transparent;
+    font-size: 13px;
+    color: var(--ink);
+    padding: 0;
+    font-family: inherit;
+    outline: none;
+}
+
+.step-text:focus {
+    outline: none;
+}
+
+.step-delete-btn {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    border: none;
+    background: transparent;
+    color: var(--ink-f);
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--r-sm);
+    transition: background 0.15s, color 0.15s;
+}
+
+.step-delete-btn:hover {
+    background: var(--line);
+    color: var(--ink-s);
+}
+
+/* ===== Card Steps Progress ===== */
+.card-steps-progress {
+    font-size: 11px;
+    color: var(--ink-f);
+    padding: 4px 0;
+    font-weight: 500;
+}
+
 /* ===== Scrollbars ===== */
 ::-webkit-scrollbar {
     width: 8px;
