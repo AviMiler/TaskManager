@@ -10,6 +10,9 @@ let currentProjectId = null;
 let editingTaskId = null;
 let draggingTaskId = null;
 let nextTaskId = 1000;
+let currentView = 'kanban'; // 'kanban' | 'list'
+let activeFilters = { priority: null, tag: null, assignee: null };
+let activeSort = 'created-desc'; // 'created-desc' | 'created-asc' | 'priority' | 'title' | 'due'
 
 // Hue palette for project dots
 const HUES = [230, 160, 40, 290, 0, 60, 120, 180, 260, 320];
@@ -249,7 +252,7 @@ function moveTask(id, newState) {
 // ===== Kanban Rendering =====
 function renderKanban() {
     if (!currentProjectId) return;
-    const tasks = getTasks(currentProjectId);
+    const tasks = applyFiltersAndSort(getTasks(currentProjectId));
 
     const states = ['todo', 'doing', 'done'];
     states.forEach(state => {
@@ -266,7 +269,7 @@ function renderKanban() {
             return;
         }
 
-        stateTasks.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).forEach(task => {
+        stateTasks.forEach(task => {
             col.appendChild(buildCard(task));
         });
     });
@@ -373,6 +376,7 @@ function setupColumnDragDrop() {
 // ===== UI Update =====
 function updateUI() {
     const board = document.getElementById('kanbanBoard');
+    const list = document.getElementById('listView');
     const empty = document.getElementById('emptyState');
     const title = document.getElementById('pageTitle');
     const breadcrumb = document.getElementById('currentProjectName');
@@ -383,9 +387,15 @@ function updateUI() {
         if (project) {
             title.textContent = project.name;
             breadcrumb.textContent = project.name;
-            board.style.display = 'grid';
             empty.style.display = 'none';
-            renderKanban();
+            if (currentView === 'list') {
+                board.style.display = 'none';
+                setView('list');
+            } else {
+                if (list) list.style.display = 'none';
+                board.style.display = 'grid';
+                renderKanban();
+            }
             return;
         }
     }
@@ -393,6 +403,7 @@ function updateUI() {
     breadcrumb.textContent = 'Workspace';
     subtitle.textContent = 'כדי להתחיל, בחר או צור פרויקט';
     board.style.display = 'none';
+    if (list) list.style.display = 'none';
     empty.style.display = 'flex';
 }
 
@@ -558,6 +569,370 @@ function setupSearch() {
     });
 }
 
+// ===== View Toggle =====
+function setView(view) {
+    currentView = view;
+    document.querySelectorAll('.tab-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.view === view);
+    });
+    const board = document.getElementById('kanbanBoard');
+    let list = document.getElementById('listView');
+    if (view === 'list') {
+        board.style.display = 'none';
+        if (!list) {
+            list = document.createElement('div');
+            list.id = 'listView';
+            list.className = 'list-view';
+            board.parentNode.insertBefore(list, board.nextSibling);
+        }
+        list.style.display = 'block';
+        if (currentProjectId) renderList();
+    } else {
+        if (list) list.style.display = 'none';
+        if (currentProjectId) {
+            board.style.display = 'grid';
+            renderKanban();
+        }
+    }
+}
+
+function renderList() {
+    if (!currentProjectId) return;
+    const list = document.getElementById('listView');
+    if (!list) return;
+
+    const tasks = applyFiltersAndSort(getTasks(currentProjectId));
+    if (tasks.length === 0) {
+        list.innerHTML = '<div class="list-empty">אין משימות להצגה</div>';
+        return;
+    }
+
+    const stateLabels = { todo: 'לביצוע', doing: 'בביצוע', done: 'בוצע' };
+    const priLabels = { high: 'גבוה', med: 'בינוני', low: 'נמוך' };
+
+    list.innerHTML = `
+        <table class="list-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>כותרת</th>
+                    <th>מצב</th>
+                    <th>תעדוף</th>
+                    <th>תגית</th>
+                    <th>אחראי</th>
+                    <th>תאריך יעד</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                ${tasks.map(t => `
+                    <tr data-id="${t.id}" class="list-row ${t.state === 'done' ? 'done' : ''}">
+                        <td class="list-id">#${String(t.id).padStart(4, '0')}</td>
+                        <td class="list-title">${t.title}</td>
+                        <td><span class="state-pill state-${t.state}">${stateLabels[t.state] || t.state}</span></td>
+                        <td><span class="priority priority-${t.priority || 'med'}">${priLabels[t.priority] || 'בינוני'}</span></td>
+                        <td>${t.tag ? `<span class="tag tag-${KNOWN_TAGS.includes(t.tag) ? t.tag : 'default'}">${t.tag}</span>` : ''}</td>
+                        <td>${t.assignee ? `<div class="avatar avatar-sm" style="--hue: ${nameHue(t.assignee)};" title="${t.assignee}">${initials(t.assignee)}</div>` : ''}</td>
+                        <td>${t.due || ''}</td>
+                        <td>
+                            <button class="card-action-btn" type="button" aria-label="ערוך" onclick="openEditModal(${t.id})">✎</button>
+                            <button class="card-action-btn delete" type="button" aria-label="מחק" onclick="deleteTask(${t.id}, event)">×</button>
+                        </td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    `;
+}
+
+// ===== Filter + Sort =====
+function applyFiltersAndSort(tasks) {
+    let out = tasks.slice();
+
+    if (activeFilters.priority) out = out.filter(t => t.priority === activeFilters.priority);
+    if (activeFilters.tag) out = out.filter(t => t.tag === activeFilters.tag);
+    if (activeFilters.assignee) out = out.filter(t => t.assignee === activeFilters.assignee);
+
+    const priOrder = { high: 0, med: 1, low: 2 };
+    out.sort((a, b) => {
+        switch (activeSort) {
+            case 'created-asc': return new Date(a.createdAt) - new Date(b.createdAt);
+            case 'created-desc': return new Date(b.createdAt) - new Date(a.createdAt);
+            case 'priority': return (priOrder[a.priority] ?? 1) - (priOrder[b.priority] ?? 1);
+            case 'title': return a.title.localeCompare(b.title, 'he');
+            case 'due': {
+                if (!a.due && !b.due) return 0;
+                if (!a.due) return 1;
+                if (!b.due) return -1;
+                return (a.dueIn ?? 9999) - (b.dueIn ?? 9999);
+            }
+            default: return 0;
+        }
+    });
+    return out;
+}
+
+function openFilterMenu(anchor) {
+    closePopovers();
+    const tasks = currentProjectId ? getTasks(currentProjectId) : [];
+    const tags = [...new Set(tasks.map(t => t.tag).filter(Boolean))];
+    const assignees = [...new Set(tasks.map(t => t.assignee).filter(Boolean))];
+
+    const pop = document.createElement('div');
+    pop.className = 'popover';
+    pop.id = 'activePopover';
+    pop.innerHTML = `
+        <div class="popover-title">סינון</div>
+        <div class="popover-section">
+            <div class="popover-label">תעדוף</div>
+            <div class="popover-row">
+                ${['high', 'med', 'low'].map(p => `
+                    <button class="popover-chip ${activeFilters.priority === p ? 'active' : ''}" type="button" onclick="setFilter('priority', '${p}')">
+                        ${p === 'high' ? 'גבוה' : p === 'med' ? 'בינוני' : 'נמוך'}
+                    </button>
+                `).join('')}
+            </div>
+        </div>
+        ${tags.length ? `
+            <div class="popover-section">
+                <div class="popover-label">תגית</div>
+                <div class="popover-row">
+                    ${tags.map(tag => `<button class="popover-chip ${activeFilters.tag === tag ? 'active' : ''}" type="button" onclick="setFilter('tag', '${escapeAttr(tag)}')">${tag}</button>`).join('')}
+                </div>
+            </div>
+        ` : ''}
+        ${assignees.length ? `
+            <div class="popover-section">
+                <div class="popover-label">אחראי</div>
+                <div class="popover-row">
+                    ${assignees.map(a => `<button class="popover-chip ${activeFilters.assignee === a ? 'active' : ''}" type="button" onclick="setFilter('assignee', '${escapeAttr(a)}')">${a}</button>`).join('')}
+                </div>
+            </div>
+        ` : ''}
+        <div class="popover-footer">
+            <button class="btn-secondary" type="button" onclick="clearFilters()">נקה הכל</button>
+            <button class="btn-primary" type="button" onclick="closePopovers()">סגור</button>
+        </div>
+    `;
+    positionPopover(pop, anchor);
+    document.body.appendChild(pop);
+}
+
+function openSortMenu(anchor) {
+    closePopovers();
+    const opts = [
+        ['created-desc', 'הכי חדש קודם'],
+        ['created-asc', 'הכי ישן קודם'],
+        ['priority', 'לפי תעדוף'],
+        ['title', 'לפי כותרת (א-ת)'],
+        ['due', 'לפי תאריך יעד']
+    ];
+    const pop = document.createElement('div');
+    pop.className = 'popover';
+    pop.id = 'activePopover';
+    pop.innerHTML = `
+        <div class="popover-title">מיון</div>
+        <div class="popover-menu">
+            ${opts.map(([k, label]) => `
+                <button class="popover-menu-item ${activeSort === k ? 'active' : ''}" type="button" onclick="setSort('${k}')">
+                    ${label}
+                </button>
+            `).join('')}
+        </div>
+    `;
+    positionPopover(pop, anchor);
+    document.body.appendChild(pop);
+}
+
+function positionPopover(pop, anchor) {
+    const rect = anchor.getBoundingClientRect();
+    pop.style.position = 'fixed';
+    pop.style.top = (rect.bottom + 4) + 'px';
+    pop.style.right = (window.innerWidth - rect.right) + 'px';
+    pop.style.zIndex = '500';
+}
+
+function closePopovers() {
+    const p = document.getElementById('activePopover');
+    if (p) p.remove();
+}
+
+function setFilter(type, value) {
+    activeFilters[type] = activeFilters[type] === value ? null : value;
+    rerenderCurrentView();
+    closePopovers();
+    updateFilterBadge();
+}
+
+function clearFilters() {
+    activeFilters = { priority: null, tag: null, assignee: null };
+    rerenderCurrentView();
+    closePopovers();
+    updateFilterBadge();
+}
+
+function setSort(sort) {
+    activeSort = sort;
+    rerenderCurrentView();
+    closePopovers();
+}
+
+function updateFilterBadge() {
+    const active = Object.values(activeFilters).filter(Boolean).length;
+    const btn = document.querySelector('.header-btn-filter');
+    if (btn) {
+        const existing = btn.querySelector('.filter-badge');
+        if (existing) existing.remove();
+        if (active > 0) {
+            const badge = document.createElement('span');
+            badge.className = 'filter-badge';
+            badge.textContent = active;
+            btn.appendChild(badge);
+        }
+    }
+}
+
+function rerenderCurrentView() {
+    if (currentView === 'kanban') renderKanban();
+    else renderList();
+}
+
+// ===== Notifications / Settings / User menus =====
+function openNotificationsMenu(anchor) {
+    closePopovers();
+    const tasks = getAllTasks();
+    const overdue = tasks.filter(t => t.state !== 'done' && t.dueIn !== null && t.dueIn !== undefined && t.dueIn <= 7);
+
+    const pop = document.createElement('div');
+    pop.className = 'popover';
+    pop.id = 'activePopover';
+    pop.innerHTML = `
+        <div class="popover-title">התראות</div>
+        ${overdue.length === 0
+            ? '<div class="popover-empty">אין התראות חדשות 🎉</div>'
+            : `<div class="popover-menu">${overdue.map(t => {
+                const proj = getProjects().find(p => p.id === t.projectId);
+                const urgency = t.dueIn < 0 ? 'באיחור!' : t.dueIn === 0 ? 'היום' : `בעוד ${t.dueIn} ימים`;
+                return `
+                    <div class="popover-notif" onclick="jumpToTask(${t.projectId}, ${t.id})">
+                        <div class="notif-title">${t.title}</div>
+                        <div class="notif-meta">${proj ? proj.name : ''} · ${urgency}</div>
+                    </div>
+                `;
+            }).join('')}</div>`
+        }
+    `;
+    positionPopover(pop, anchor);
+    document.body.appendChild(pop);
+}
+
+function jumpToTask(projectId, taskId) {
+    closePopovers();
+    if (projectId !== currentProjectId) selectProject(projectId);
+    openEditModal(taskId);
+}
+
+function openSettingsMenu(anchor) {
+    closePopovers();
+    const pop = document.createElement('div');
+    pop.className = 'popover';
+    pop.id = 'activePopover';
+    pop.innerHTML = `
+        <div class="popover-title">הגדרות</div>
+        <div class="popover-menu">
+            <button class="popover-menu-item" type="button" onclick="exportData()">📥 ייצא JSON</button>
+            <button class="popover-menu-item" type="button" onclick="document.getElementById('importFile').click()">📤 ייבא JSON</button>
+            <button class="popover-menu-item" type="button" onclick="showBackupInfo()">💾 פרטי גיבוי</button>
+            <button class="popover-menu-item danger" type="button" onclick="clearAllData()">🗑️ נקה את כל הנתונים</button>
+        </div>
+    `;
+    positionPopover(pop, anchor);
+    document.body.appendChild(pop);
+}
+
+function openUserMenu(anchor) {
+    closePopovers();
+    const projects = getProjects().length;
+    const tasks = getAllTasks().length;
+    const done = getAllTasks().filter(t => t.state === 'done').length;
+
+    const pop = document.createElement('div');
+    pop.className = 'popover';
+    pop.id = 'activePopover';
+    pop.innerHTML = `
+        <div class="popover-title">הפרופיל שלי</div>
+        <div class="popover-stats">
+            <div class="stat"><div class="stat-num">${projects}</div><div class="stat-label">פרויקטים</div></div>
+            <div class="stat"><div class="stat-num">${tasks}</div><div class="stat-label">משימות</div></div>
+            <div class="stat"><div class="stat-num">${done}</div><div class="stat-label">הושלמו</div></div>
+        </div>
+        <div class="popover-menu">
+            <button class="popover-menu-item" type="button" onclick="exportData()">📥 ייצא נתונים</button>
+            <button class="popover-menu-item" type="button" onclick="showBackupInfo()">💾 פרטי גיבוי</button>
+        </div>
+    `;
+    positionPopover(pop, anchor);
+    document.body.appendChild(pop);
+}
+
+// ===== Settings actions =====
+function exportData() {
+    closePopovers();
+    const data = {
+        projects: getProjects(),
+        tasks: getAllTasks(),
+        exportedAt: new Date().toISOString()
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `taskboard-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+function importData(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const data = JSON.parse(e.target.result);
+            if (!Array.isArray(data.projects) || !Array.isArray(data.tasks)) {
+                alert('קובץ לא תקין');
+                return;
+            }
+            if (!confirm(`לייבא ${data.projects.length} פרויקטים ו-${data.tasks.length} משימות? זה יחליף את הנתונים הקיימים.`)) return;
+            localStorage.setItem(DB.projects, JSON.stringify(data.projects));
+            localStorage.setItem(DB.tasks, JSON.stringify(data.tasks));
+            createBackup();
+            location.reload();
+        } catch (err) {
+            alert('שגיאה בקריאת הקובץ: ' + err.message);
+        }
+    };
+    reader.readAsText(file);
+}
+
+function showBackupInfo() {
+    closePopovers();
+    const b = localStorage.getItem(DB.backup);
+    if (!b) {
+        alert('אין גיבוי זמין');
+        return;
+    }
+    const backup = JSON.parse(b);
+    alert(`גיבוי אחרון: ${new Date(backup.timestamp).toLocaleString('he-IL')}\n${backup.projects.length} פרויקטים, ${backup.tasks.length} משימות`);
+}
+
+function clearAllData() {
+    closePopovers();
+    if (!confirm('⚠️ זה ימחק את כל הפרויקטים והמשימות!\n\nהאם אתה בטוח?')) return;
+    if (!confirm('אישור אחרון - אין דרך חזרה!')) return;
+    [DB.projects, DB.tasks, DB.backup, DB.currentProject].forEach(k => localStorage.removeItem(k));
+    location.reload();
+}
+
 // ===== Event Listeners =====
 function setupEventListeners() {
     // New project
@@ -576,11 +951,43 @@ function setupEventListeners() {
         btn.addEventListener('click', () => openEditModal(null));
     });
 
-    // Escape key to close modal
+    // View tabs
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => setView(btn.dataset.view));
+    });
+
+    // Filter + Sort
+    const filterBtn = document.querySelector('.header-btn-filter');
+    const sortBtn = document.querySelector('.header-btn-sort');
+    if (filterBtn) filterBtn.addEventListener('click', (e) => { e.stopPropagation(); openFilterMenu(filterBtn); });
+    if (sortBtn) sortBtn.addEventListener('click', (e) => { e.stopPropagation(); openSortMenu(sortBtn); });
+
+    // Topbar icons
+    const bellBtn = document.querySelector('.topbar-icon-btn[aria-label="התראות"]');
+    const settingsBtn = document.querySelector('.topbar-icon-btn[aria-label="הגדרות"]');
+    if (bellBtn) bellBtn.addEventListener('click', (e) => { e.stopPropagation(); openNotificationsMenu(bellBtn); });
+    if (settingsBtn) settingsBtn.addEventListener('click', (e) => { e.stopPropagation(); openSettingsMenu(settingsBtn); });
+
+    // User card more
+    const userMore = document.querySelector('.user-card .icon-btn-small');
+    if (userMore) userMore.addEventListener('click', (e) => { e.stopPropagation(); openUserMenu(userMore); });
+
+    // Import file input
+    const importInput = document.getElementById('importFile');
+    if (importInput) importInput.addEventListener('change', (e) => importData(e.target.files[0]));
+
+    // Close popovers on outside click
+    document.addEventListener('click', (e) => {
+        const pop = document.getElementById('activePopover');
+        if (pop && !pop.contains(e.target)) closePopovers();
+    });
+
+    // Escape key to close modal / popover
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             const m = document.getElementById('taskModal');
-            if (m) closeModal();
+            if (m) { closeModal(); return; }
+            closePopovers();
         }
     });
 
@@ -623,9 +1030,22 @@ function initials(name) {
     return (parts[0]?.[0] || '') + (parts[1]?.[0] || '');
 }
 
+function escapeAttr(text) {
+    if (!text) return '';
+    return String(text).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+}
+
 // Expose globally for inline handlers
 window.deleteProject = deleteProject;
 window.deleteTask = deleteTask;
 window.openEditModal = openEditModal;
 window.saveTaskFromModal = saveTaskFromModal;
 window.closeModal = closeModal;
+window.setFilter = setFilter;
+window.setSort = setSort;
+window.clearFilters = clearFilters;
+window.closePopovers = closePopovers;
+window.exportData = exportData;
+window.showBackupInfo = showBackupInfo;
+window.clearAllData = clearAllData;
+window.jumpToTask = jumpToTask;
