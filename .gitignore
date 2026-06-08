@@ -1,3 +1,15 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Python (if needed in future)
 __pycache__/
 *.py[cod]
 *$py.class
@@ -18,18 +30,15 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-
 venv/
 ENV/
 env/
 
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
+# Node (if needed in future)
+node_modules/
+npm-debug.log
 
-.DS_Store
-
-data/
-!data/.gitkeep
+# Misc
+.env
+.env.local
+*.log

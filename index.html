@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TaskBoard - מנהל משימות</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Assistant:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="wrapper">
+        <!-- Top Bar -->
+        <div class="topbar">
+            <div class="topbar-logo">T</div>
+            <div class="topbar-brand">TaskBoard</div>
+            <div class="topbar-divider"></div>
+            <div class="topbar-breadcrumb">
+                <span class="breadcrumb-label">Workspace</span>
+                <span class="breadcrumb-sep">/</span>
+                <span class="breadcrumb-project" id="currentProjectName">ביטוח לאומי</span>
+            </div>
+            <div class="topbar-search-wrap">
+                <svg class="topbar-search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14Z"/><path d="m21 21-4.3-4.3"/>
+                </svg>
+                <input class="topbar-search" type="text" placeholder="חיפוש משימות, פרויקטים…" id="searchInput">
+            </div>
+            <button class="topbar-icon-btn" type="button" title="התראות" aria-label="התראות">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                    <path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
+                </svg>
+            </button>
+            <button class="topbar-icon-btn" type="button" title="הגדרות" aria-label="הגדרות">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                    <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/>
+                </svg>
+            </button>
+            <div class="avatar" style="--hue: 200;">ד"ג</div>
+        </div>
+
+        <!-- Body -->
+        <div class="body">
+            <!-- Sidebar -->
+            <aside class="sidebar">
+                <div class="sidebar-header">
+                    <span class="sidebar-title">פרויקטים</span>
+                    <span class="sidebar-count" id="projectCount">0</span>
+                </div>
+                <div class="projects-list" id="projectsList"></div>
+                <div class="sidebar-add">
+                    <input class="sidebar-input" type="text" placeholder="פרויקט חדש…" id="newProjectInput" aria-label="שם פרויקט חדש">
+                    <button class="sidebar-add-btn" type="button" aria-label="הוסף פרויקט">+</button>
+                </div>
+                <div class="user-card">
+                    <div class="avatar" style="--hue: 200;">ד"ג</div>
+                    <div class="user-meta">
+                        <div class="user-name">דנה גולן</div>
+                        <div class="user-role">מנהל פרויקטים</div>
+                    </div>
+                    <button class="icon-btn-small" type="button" aria-label="עוד אפשרויות">
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
+                            <circle cx="2" cy="6" r="1.1"/><circle cx="6" cy="6" r="1.1"/><circle cx="10" cy="6" r="1.1"/>
+                        </svg>
+                    </button>
+                </div>
+            </aside>
+
+            <!-- Main -->
+            <main class="main">
+                <!-- Page Header -->
+                <div class="page-header">
+                    <div>
+                        <h1 class="page-title" id="pageTitle">בחר פרויקט</h1>
+                        <p class="page-subtitle" id="pageSubtitle">כדי להתחיל, בחר פרויקט מהשמאל</p>
+                    </div>
+                    <div class="header-actions">
+                        <div class="view-tabs">
+                            <button class="tab-btn active" data-view="kanban">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                    <rect x="4" y="5" width="5" height="14"/><rect x="15" y="5" width="5" height="8"/>
+                                </svg>
+                                <span>לוח</span>
+                            </button>
+                            <button class="tab-btn" data-view="list">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                    <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
+                                </svg>
+                                <span>רשימה</span>
+                            </button>
+                        </div>
+                        <div class="header-divider"></div>
+                        <button class="header-btn header-btn-filter" type="button">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                                <line x1="3" y1="6" x2="21" y2="6"/><line x1="7" y1="12" x2="21" y2="12"/><line x1="10" y1="18" x2="21" y2="18"/>
+                            </svg>
+                            סנן
+                        </button>
+                        <button class="header-btn header-btn-sort" type="button">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+                                <path d="M3 6h13"/><path d="M3 12h9"/><path d="M3 18h5"/><path d="M19 4v16"/><path d="M15 16l4 4 4-4"/>
+                            </svg>
+                            מיין
+                        </button>
+                        <input type="file" id="importFile" accept=".json" style="display:none">
+                        <button class="add-task-btn">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 5v14"/><path d="M5 12h14"/>
+                            </svg>
+                            משימה
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Kanban Board (columns rendered dynamically) -->
+                <div class="kanban-board" id="kanbanBoard"></div>
+
+                <!-- Empty State -->
+                <div class="empty-state" id="emptyState">
+                    <p>👈 בחר פרויקט מהשמאל כדי להתחיל</p>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
