@@ -82,7 +82,8 @@ function addProject(name) {
     if (!name) return;
 
     const projects = getProjects();
-    if (projects.find(p => p.name === name)) {
+    const escapedName = escapeHtml(name);
+    if (projects.find(p => p.name === escapedName)) {
         alert('פרויקט עם שם זה כבר קיים');
         return;
     }
@@ -426,7 +427,7 @@ function buildModal(task, isNew) {
         <div class="modal" onclick="event.stopPropagation()">
             <div class="modal-header">
                 <h2 class="modal-title">${isNew ? 'משימה חדשה' : 'עריכת משימה'}</h2>
-                <button class="modal-close" onclick="closeModal()">×</button>
+                <button class="modal-close" type="button" aria-label="סגור" onclick="closeModal()">×</button>
             </div>
             <div class="modal-body">
                 <div class="field">
@@ -560,7 +561,7 @@ function setupSearch() {
 // ===== Event Listeners =====
 function setupEventListeners() {
     // New project
-    document.getElementById('newProjectInput').addEventListener('keypress', (e) => {
+    document.getElementById('newProjectInput').addEventListener('keydown', (e) => {
         if (e.key === 'Enter') addProject(e.target.value);
     });
     document.querySelector('.sidebar-add-btn').addEventListener('click', () => {

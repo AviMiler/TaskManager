@@ -27,13 +27,13 @@
                 </svg>
                 <input class="topbar-search" type="text" placeholder="חיפוש משימות, פרויקטים…" id="searchInput">
             </div>
-            <button class="topbar-icon-btn" title="התראות">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <button class="topbar-icon-btn" type="button" title="התראות" aria-label="התראות">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
                     <path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
                 </svg>
             </button>
-            <button class="topbar-icon-btn" title="הגדרות">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <button class="topbar-icon-btn" type="button" title="הגדרות" aria-label="הגדרות">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
                     <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/>
                 </svg>
             </button>
@@ -50,8 +50,8 @@
                 </div>
                 <div class="projects-list" id="projectsList"></div>
                 <div class="sidebar-add">
-                    <input class="sidebar-input" type="text" placeholder="פרויקט חדש…" id="newProjectInput">
-                    <button class="sidebar-add-btn">+</button>
+                    <input class="sidebar-input" type="text" placeholder="פרויקט חדש…" id="newProjectInput" aria-label="שם פרויקט חדש">
+                    <button class="sidebar-add-btn" type="button" aria-label="הוסף פרויקט">+</button>
                 </div>
                 <div class="user-card">
                     <div class="avatar" style="--hue: 200;">ד"ג</div>
@@ -59,8 +59,8 @@
                         <div class="user-name">דנה גולן</div>
                         <div class="user-role">מנהל פרויקטים</div>
                     </div>
-                    <button class="icon-btn-small">
-                        <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+                    <button class="icon-btn-small" type="button" aria-label="עוד אפשרויות">
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
                             <circle cx="2" cy="6" r="1.1"/><circle cx="6" cy="6" r="1.1"/><circle cx="10" cy="6" r="1.1"/>
                         </svg>
                     </button>
@@ -119,7 +119,7 @@
                             <span class="column-dot"></span>
                             <span class="column-title">To Do</span>
                             <span class="column-count">0</span>
-                            <button class="column-add-btn">+</button>
+                            <button class="column-add-btn" type="button" aria-label="הוסף משימה לעמודה">+</button>
                         </div>
                         <div class="column-body" id="column-todo"></div>
                     </div>
@@ -128,7 +128,7 @@
                             <span class="column-dot"></span>
                             <span class="column-title">Active</span>
                             <span class="column-count">0</span>
-                            <button class="column-add-btn">+</button>
+                            <button class="column-add-btn" type="button" aria-label="הוסף משימה לעמודה">+</button>
                         </div>
                         <div class="column-body" id="column-doing"></div>
                     </div>
@@ -137,7 +137,7 @@
                             <span class="column-dot"></span>
                             <span class="column-title">Closed</span>
                             <span class="column-count">0</span>
-                            <button class="column-add-btn">+</button>
+                            <button class="column-add-btn" type="button" aria-label="הוסף משימה לעמודה">+</button>
                         </div>
                         <div class="column-body" id="column-done"></div>
                     </div>
