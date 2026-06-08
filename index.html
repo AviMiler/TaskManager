@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Manager - מנהל משימות</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1>📋 Task Manager</h1>
+            <p>מנהל משימות ופרוייקטים מקומי</p>
+        </header>
+
+        <div class="main-content">
+            <!-- Left Sidebar - Projects -->
+            <aside class="sidebar">
+                <div class="sidebar-header">
+                    <h2>פרוייקטים</h2>
+                </div>
+
+                <div class="input-group">
+                    <input
+                        type="text"
+                        id="projectInput"
+                        placeholder="שם פרוייקט חדש..."
+                        class="input-field"
+                    >
+                    <button id="addProjectBtn" class="btn btn-primary">➕</button>
+                </div>
+
+                <div class="projects-list" id="projectsList">
+                    <!-- Projects will be added here dynamically -->
+                </div>
+
+                <div class="sidebar-footer">
+                    <button id="backupBtn" class="btn btn-secondary btn-block">💾 גיבוי</button>
+                    <button id="clearDataBtn" class="btn btn-danger btn-block">🗑️ נקה הכל</button>
+                </div>
+            </aside>
+
+            <!-- Right Content - Tasks -->
+            <main class="content">
+                <div class="content-header">
+                    <h2 id="currentProjectTitle">בחר פרוייקט</h2>
+                </div>
+
+                <!-- Add Task Section -->
+                <div class="task-input-section" id="taskInputSection" style="display: none;">
+                    <div class="input-group vertical">
+                        <input
+                            type="text"
+                            id="taskTitle"
+                            placeholder="כותרת המשימה..."
+                            class="input-field"
+                        >
+                        <textarea
+                            id="taskDescription"
+                            placeholder="תיאור (אופציונלי)..."
+                            class="input-field textarea"
+                            rows="2"
+                        ></textarea>
+                        <button id="addTaskBtn" class="btn btn-primary">➕ הוסף משימה</button>
+                    </div>
+                </div>
+
+                <!-- Tasks List -->
+                <div class="tasks-list" id="tasksList">
+                    <!-- Tasks will be added here dynamically -->
+                </div>
+
+                <!-- Empty State -->
+                <div class="empty-state" id="emptyState">
+                    <p>👈 בחר פרוייקט מהשמאל כדי להתחיל</p>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Modal for editing task -->
+    <div id="editModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>עריכת משימה</h3>
+                <button class="close-btn" id="closeModalBtn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input
+                    type="text"
+                    id="editTaskTitle"
+                    class="input-field"
+                    placeholder="כותרת המשימה..."
+                >
+                <textarea
+                    id="editTaskDescription"
+                    class="input-field textarea"
+                    placeholder="תיאור (אופציונלי)..."
+                    rows="3"
+                ></textarea>
+            </div>
+            <div class="modal-footer">
+                <button id="cancelEditBtn" class="btn btn-secondary">ביטול</button>
+                <button id="saveEditBtn" class="btn btn-primary">שמור</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
