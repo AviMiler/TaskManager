@@ -850,15 +850,94 @@ function closeModal() {
 // ===== Search =====
 function setupSearch() {
     const input = document.getElementById('searchInput');
+    let debounce = null;
+
     input.addEventListener('input', () => {
-        const term = input.value.toLowerCase().trim();
-        document.querySelectorAll('.card').forEach(card => {
-            const title = card.querySelector('.card-title')?.textContent.toLowerCase() || '';
-            const desc = card.querySelector('.card-description')?.textContent.toLowerCase() || '';
-            const match = !term || title.includes(term) || desc.includes(term);
-            card.style.display = match ? '' : 'none';
-        });
+        clearTimeout(debounce);
+        debounce = setTimeout(() => {
+            const term = input.value.trim();
+            if (term.length >= 2) openSearchResults(term);
+            else closeSearchResults();
+        }, 150);
     });
+
+    input.addEventListener('focus', () => {
+        if (input.value.trim().length >= 2) openSearchResults(input.value.trim());
+    });
+}
+
+function openSearchResults(term) {
+    closeSearchResults();
+
+    const q = term.toLowerCase();
+    const projects = getProjects();
+    const projectMap = Object.fromEntries(projects.map(p => [p.id, p]));
+    const columns = getColumns();
+    const stateLabel = id => (columns.find(c => c.id === id) || {}).name || id;
+    const stateHue  = id => (columns.find(c => c.id === id) || {}).hue  || 220;
+    const types = getTaskTypes();
+    const typeMap = Object.fromEntries(types.map(t => [t.id, t]));
+
+    const matches = getAllTasks().filter(t =>
+        (t.title       || '').toLowerCase().includes(q) ||
+        (t.description || '').toLowerCase().includes(q) ||
+        (t.assignee    || '').toLowerCase().includes(q) ||
+        (t.tag         || '').toLowerCase().includes(q)
+    ).slice(0, 30);
+
+    const wrap = document.getElementById('topbar-search-wrap') ||
+                 document.querySelector('.topbar-search-wrap');
+    const rect = wrap.getBoundingClientRect();
+
+    const panel = document.createElement('div');
+    panel.id = 'searchResults';
+    panel.className = 'search-results';
+    panel.style.top  = rect.bottom + 'px';
+    panel.style.right = (window.innerWidth - rect.right) + 'px';
+
+    if (matches.length === 0) {
+        panel.innerHTML = `<div class="search-empty">אין תוצאות עבור "<strong>${escapeHtml(term)}</strong>"</div>`;
+    } else {
+        panel.innerHTML = `
+            <div class="search-header">${matches.length} תוצאות</div>
+            ${matches.map(t => {
+                const proj = projectMap[t.projectId];
+                const ty   = t.taskType ? typeMap[t.taskType] : null;
+                return `
+                <div class="search-row" data-proj="${t.projectId}" data-task="${t.id}">
+                    <div class="search-row-main">
+                        <span class="search-row-title">${highlightMatch(t.title, q)}</span>
+                        ${ty ? `<span class="task-type-badge" style="--type-hue:${ty.hue};">${ty.name}</span>` : ''}
+                    </div>
+                    <div class="search-row-meta">
+                        <span class="search-proj">${proj ? proj.name : '—'}</span>
+                        <span class="state-pill" style="--col-hue:${stateHue(t.state)};">${stateLabel(t.state)}</span>
+                    </div>
+                </div>`;
+            }).join('')}
+        `;
+
+        panel.querySelectorAll('.search-row').forEach(row => {
+            row.addEventListener('click', () => {
+                closeSearchResults();
+                document.getElementById('searchInput').value = '';
+                jumpToTask(Number(row.dataset.proj), Number(row.dataset.task));
+            });
+        });
+    }
+
+    document.body.appendChild(panel);
+}
+
+function closeSearchResults() {
+    const p = document.getElementById('searchResults');
+    if (p) p.remove();
+}
+
+function highlightMatch(text, q) {
+    const safe = escapeHtml(text);
+    const safeQ = escapeHtml(q).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return safe.replace(new RegExp(`(${safeQ})`, 'gi'), '<mark>$1</mark>');
 }
 
 // ===== View Toggle =====
@@ -1395,13 +1474,20 @@ function setupEventListeners() {
     document.addEventListener('click', (e) => {
         const pop = document.getElementById('activePopover');
         if (pop && !pop.contains(e.target)) closePopovers();
+        const sr = document.getElementById('searchResults');
+        if (sr && !sr.contains(e.target) && !e.target.closest('.topbar-search-wrap')) closeSearchResults();
     });
 
-    // Escape key to close modal / popover
+    // Escape key to close modal / popover / search
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             const m = document.getElementById('taskModal');
             if (m) { closeModal(); return; }
+            if (document.getElementById('searchResults')) {
+                closeSearchResults();
+                document.getElementById('searchInput').value = '';
+                return;
+            }
             closePopovers();
         }
     });
