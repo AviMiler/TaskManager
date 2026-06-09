@@ -380,33 +380,6 @@ input {
     border-color: var(--blue);
 }
 
-.user-card {
-    margin-top: auto;
-    padding: 12px 14px;
-    border-top: 1px solid var(--line);
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.user-meta {
-    flex: 1;
-    min-width: 0;
-}
-
-.user-name {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--ink);
-    line-height: 1.2;
-}
-
-.user-role {
-    font-size: 11px;
-    color: var(--ink-f);
-    margin-top: 1px;
-}
-
 .icon-btn-small {
     width: 28px;
     height: 28px;

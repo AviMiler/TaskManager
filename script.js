@@ -1112,10 +1112,6 @@ function setupEventListeners() {
     if (bellBtn) bellBtn.addEventListener('click', (e) => { e.stopPropagation(); openNotificationsMenu(bellBtn); });
     if (settingsBtn) settingsBtn.addEventListener('click', (e) => { e.stopPropagation(); openSettingsMenu(settingsBtn); });
 
-    // User card more
-    const userMore = document.querySelector('.user-card .icon-btn-small');
-    if (userMore) userMore.addEventListener('click', (e) => { e.stopPropagation(); openUserMenu(userMore); });
-
     // Import file input
     const importInput = document.getElementById('importFile');
     if (importInput) importInput.addEventListener('change', (e) => importData(e.target.files[0]));
