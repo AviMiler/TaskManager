@@ -1636,6 +1636,12 @@ input {
     background: var(--bg);
 }
 
+.search-row.active {
+    background: var(--bg);
+    outline: 2px solid var(--blue);
+    outline-offset: -2px;
+}
+
 .search-row-main {
     display: flex;
     align-items: center;
@@ -1665,6 +1671,13 @@ input {
 .search-proj {
     font-size: 11.5px;
     color: var(--ink-f);
+}
+
+.search-row-id {
+    font-size: 11px;
+    color: var(--ink-f);
+    font-variant-numeric: tabular-nums;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 .search-empty {

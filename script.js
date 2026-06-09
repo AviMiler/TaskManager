@@ -854,9 +854,17 @@ function closeModal() {
 function setupSearch() {
     const input = document.getElementById('searchInput');
     let debounce = null;
+    let activeSearchIndex = -1;
+
+    function setActiveRow(rows, idx) {
+        rows.forEach(r => r.classList.remove('active'));
+        rows[idx].classList.add('active');
+        rows[idx].scrollIntoView({ block: 'nearest' });
+    }
 
     input.addEventListener('input', () => {
         clearTimeout(debounce);
+        activeSearchIndex = -1;
         debounce = setTimeout(() => {
             const term = input.value.trim();
             if (term.length >= 2) openSearchResults(term);
@@ -866,6 +874,25 @@ function setupSearch() {
 
     input.addEventListener('focus', () => {
         if (input.value.trim().length >= 2) openSearchResults(input.value.trim());
+    });
+
+    input.addEventListener('keydown', (e) => {
+        const panel = document.getElementById('searchResults');
+        if (!panel) return;
+        const rows = Array.from(panel.querySelectorAll('.search-row'));
+        if (!rows.length) return;
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            activeSearchIndex = Math.min(activeSearchIndex + 1, rows.length - 1);
+            setActiveRow(rows, activeSearchIndex);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            activeSearchIndex = Math.max(activeSearchIndex - 1, 0);
+            setActiveRow(rows, activeSearchIndex);
+        } else if (e.key === 'Enter' && activeSearchIndex >= 0) {
+            rows[activeSearchIndex].click();
+        }
     });
 }
 
@@ -896,7 +923,9 @@ function openSearchResults(term) {
     panel.id = 'searchResults';
     panel.className = 'search-results';
     panel.style.top  = rect.bottom + 'px';
-    panel.style.right = (window.innerWidth - rect.right) + 'px';
+    panel.style.left = rect.left + 'px';
+
+    const priLabel = { high: 'גבוה', med: 'בינוני', low: 'נמוך' };
 
     if (matches.length === 0) {
         panel.innerHTML = `<div class="search-empty">אין תוצאות עבור "<strong>${escapeHtml(term)}</strong>"</div>`;
@@ -913,8 +942,10 @@ function openSearchResults(term) {
                         ${ty ? `<span class="task-type-badge" style="--type-hue:${ty.hue};">${ty.name}</span>` : ''}
                     </div>
                     <div class="search-row-meta">
+                        <span class="search-row-id">#${String(t.id).padStart(4,'0')}</span>
                         <span class="search-proj">${proj ? proj.name : '—'}</span>
                         <span class="state-pill" style="--col-hue:${stateHue(t.state)};">${stateLabel(t.state)}</span>
+                        <span class="priority priority-${t.priority || 'med'}">${priLabel[t.priority] || 'בינוני'}</span>
                     </div>
                 </div>`;
             }).join('')}
