@@ -591,8 +591,8 @@ function buildCard(task) {
                 ${typeInfo ? `<span class="task-type-badge" style="--type-hue: ${typeInfo.hue};">${typeInfo.name}</span>` : ''}
                 ${task.tag ? `<span class="tag ${tagClass}">${task.tag}</span>` : ''}
             </div>
-            <span class="card-id">#${idStr}</span>
         </div>
+        <span class="card-id">#${idStr}</span>
         <div class="card-title ${isLastCol ? 'done' : ''}">${task.title}</div>
         ${task.description ? `<div class="card-description">${task.description}</div>` : ''}
         <div class="card-meta">

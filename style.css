@@ -718,19 +718,19 @@ input {
 .card-top {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 8px;
     margin-bottom: 6px;
-    padding-inline-end: 54px;
-    min-height: 22px;
 }
 
 .card-id {
-    font-size: 11px;
+    position: absolute;
+    inset-inline-end: 8px;
+    bottom: 9px;
+    font-size: 10px;
     color: var(--ink-f);
     font-weight: 600;
     font-variant-numeric: tabular-nums;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    white-space: nowrap;
 }
 
 .card-title {
