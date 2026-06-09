@@ -453,6 +453,7 @@ async function deleteTask(id, event) {
     saveTasks(tasks);
     loadProjects();
     rerenderCurrentView();
+    closeModal();
 }
 
 
