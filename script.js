@@ -455,6 +455,7 @@ async function deleteTask(id, event) {
     rerenderCurrentView();
 }
 
+
 function moveTask(id, newState) {
     updateTask(id, { state: newState });
 }
@@ -569,8 +570,7 @@ function buildCard(task) {
         card.classList.remove('dragging');
     });
 
-    card.addEventListener('click', (e) => {
-        if (e.target.closest('.card-action-btn')) return;
+    card.addEventListener('click', () => {
         openEditModal(task.id);
     });
 
@@ -582,10 +582,6 @@ function buildCard(task) {
 
     card.innerHTML = `
         <span class="card-stripe"></span>
-        <div class="card-actions">
-            <button class="card-action-btn" onclick="openEditModal(${task.id})" title="ערוך">${ICONS.pencil}</button>
-            <button class="card-action-btn delete" onclick="deleteTask(${task.id}, event)" title="מחק">×</button>
-        </div>
         <div class="card-top">
             <div class="card-badges">
                 ${typeInfo ? `<span class="task-type-badge" style="--type-hue: ${typeInfo.hue};">${typeInfo.name}</span>` : ''}
@@ -779,8 +775,11 @@ function buildModal(task, isNew, defaultColumnId) {
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn-secondary" onclick="closeModal()">ביטול</button>
-                <button class="btn-primary" onclick="saveTaskFromModal(${isNew ? 'null' : t.id})">${isNew ? 'צור משימה' : 'שמור'}</button>
+                ${!isNew ? `<button class="btn-danger" onclick="deleteTask(${t.id});">מחק</button>` : ''}
+                <div style="margin-inline-start: auto; display: flex; gap: 8px;">
+                    <button class="btn-secondary" onclick="closeModal()">ביטול</button>
+                    <button class="btn-primary" onclick="saveTaskFromModal(${isNew ? 'null' : t.id})">${isNew ? 'צור משימה' : 'שמור'}</button>
+                </div>
             </div>
         </div>
     `;

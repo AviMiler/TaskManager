@@ -1089,6 +1089,22 @@ input {
     background: var(--blue-d);
 }
 
+.btn-danger {
+    padding: 8px 14px;
+    background: #fef0ef;
+    color: #b42318;
+    border: 1px solid #fecaca;
+    border-radius: var(--r-md);
+    font-size: 13px;
+    font-weight: 600;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.btn-danger:hover {
+    background: #fde2e4;
+    border-color: #fb7185;
+}
+
 /* ===== Scrollbars ===== */
 ::-webkit-scrollbar {
     width: 8px;
