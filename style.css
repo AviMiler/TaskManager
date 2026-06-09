@@ -723,7 +723,7 @@ input {
 
 .card-id {
     position: absolute;
-    inset-inline-end: 54px;
+    inset-inline-end: 8px;
     top: 8px;
     font-size: 10px;
     color: var(--ink-f);
