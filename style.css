@@ -404,6 +404,7 @@ input {
     display: flex;
     flex-direction: column;
     min-height: 0;
+    overflow: hidden;
 }
 
 .page-header {
@@ -513,11 +514,13 @@ input {
 .kanban-board {
     padding: 18px;
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-columns: 260px 260px 260px 260px;
     gap: 14px;
-    align-content: start;
     flex: 1;
-    overflow: auto;
+    min-height: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    align-items: stretch;
 }
 
 .kanban-column {

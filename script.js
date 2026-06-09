@@ -30,6 +30,24 @@ const DEFAULT_COLUMNS = [
     { id: 'done',    name: 'Closed',   hue: 145 }
 ];
 
+const DEFAULT_TASK_TYPES = [
+    { id: 'bug',      name: 'Bug',      hue: 0   },
+    { id: 'feature',  name: 'Feature',  hue: 220 },
+    { id: 'task',     name: 'Task',     hue: 210 },
+    { id: 'refactor', name: 'Refactor', hue: 280 },
+    { id: 'docs',     name: 'Docs',     hue: 160 },
+];
+
+const ICONS = {
+    pencil: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`,
+    export: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`,
+    import: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>`,
+    save:   `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>`,
+    tag:    `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>`,
+    trash:  `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>`,
+    check:  `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`,
+};
+
 // ===== Custom Dialogs =====
 function _buildDialog({ title, message, inputDefault, buttons }) {
     return new Promise(resolve => {
@@ -425,7 +443,7 @@ function renderKanban() {
 
     const columns = getColumns();
     board.innerHTML = '';
-    board.style.gridTemplateColumns = `repeat(${columns.length}, minmax(260px, 1fr)) auto`;
+    board.style.gridTemplateColumns = `repeat(${columns.length}, 260px) auto`;
 
     const tasks = currentProjectId ? applyFiltersAndSort(getTasks(currentProjectId)) : [];
 
@@ -541,7 +559,7 @@ function buildCard(task) {
     card.innerHTML = `
         <span class="card-stripe"></span>
         <div class="card-actions">
-            <button class="card-action-btn" onclick="openEditModal(${task.id})" title="ערוך">✎</button>
+            <button class="card-action-btn" onclick="openEditModal(${task.id})" title="ערוך">${ICONS.pencil}</button>
             <button class="card-action-btn delete" onclick="deleteTask(${task.id}, event)" title="מחק">×</button>
         </div>
         <div class="card-top">
@@ -898,7 +916,7 @@ function renderList() {
                         <td>${t.assignee ? `<span class="list-assignee">${t.assignee}</span>` : ''}</td>
                         <td>${t.due || ''}</td>
                         <td>
-                            <button class="card-action-btn" type="button" aria-label="ערוך" onclick="openEditModal(${t.id})">✎</button>
+                            <button class="card-action-btn" type="button" aria-label="ערוך" onclick="openEditModal(${t.id})">${ICONS.pencil}</button>
                             <button class="card-action-btn delete" type="button" aria-label="מחק" onclick="deleteTask(${t.id}, event)">×</button>
                         </td>
                     </tr>
@@ -1083,7 +1101,7 @@ function openNotificationsMenu(anchor) {
     pop.innerHTML = `
         <div class="popover-title">התראות</div>
         ${overdue.length === 0
-            ? '<div class="popover-empty">אין התראות חדשות 🎉</div>'
+            ? `<div class="popover-empty">${ICONS.check} אין התראות חדשות</div>`
             : `<div class="popover-menu">${overdue.map(t => {
                 const proj = getProjects().find(p => p.id === t.projectId);
                 const urgency = t.dueIn < 0 ? 'באיחור!' : t.dueIn === 0 ? 'היום' : `בעוד ${t.dueIn} ימים`;
@@ -1114,10 +1132,11 @@ function openSettingsMenu(anchor) {
     pop.innerHTML = `
         <div class="popover-title">הגדרות</div>
         <div class="popover-menu">
-            <button class="popover-menu-item" type="button" onclick="exportData()">📥 ייצא JSON</button>
-            <button class="popover-menu-item" type="button" onclick="document.getElementById('importFile').click()">📤 ייבא JSON</button>
-            <button class="popover-menu-item" type="button" onclick="showBackupInfo()">💾 פרטי גיבוי</button>
-            <button class="popover-menu-item danger" type="button" onclick="clearAllData()">🗑️ נקה את כל הנתונים</button>
+            <button class="popover-menu-item" type="button" onclick="exportData()">${ICONS.export} ייצא JSON</button>
+            <button class="popover-menu-item" type="button" onclick="document.getElementById('importFile').click()">${ICONS.import} ייבא JSON</button>
+            <button class="popover-menu-item" type="button" onclick="showBackupInfo()">${ICONS.save} פרטי גיבוי</button>
+            <button class="popover-menu-item" type="button" onclick="openManageTypesModal()">${ICONS.tag} ניהול סוגי משימות</button>
+            <button class="popover-menu-item danger" type="button" onclick="clearAllData()">${ICONS.trash} נקה את כל הנתונים</button>
         </div>
     `;
     positionPopover(pop, anchor);
@@ -1143,8 +1162,8 @@ function openUserMenu(anchor) {
             <div class="stat"><div class="stat-num">${done}</div><div class="stat-label">הושלמו</div></div>
         </div>
         <div class="popover-menu">
-            <button class="popover-menu-item" type="button" onclick="exportData()">📥 ייצא נתונים</button>
-            <button class="popover-menu-item" type="button" onclick="showBackupInfo()">💾 פרטי גיבוי</button>
+            <button class="popover-menu-item" type="button" onclick="exportData()">${ICONS.export} ייצא נתונים</button>
+            <button class="popover-menu-item" type="button" onclick="showBackupInfo()">${ICONS.save} פרטי גיבוי</button>
         </div>
     `;
     positionPopover(pop, anchor);
@@ -1210,7 +1229,7 @@ async function showBackupInfo() {
 
 async function clearAllData() {
     closePopovers();
-    const ok1 = await showConfirm('⚠️ זה ימחק את כל הפרויקטים והמשימות!\n\nהאם אתה בטוח?', 'מחיקת כל הנתונים', 'מחק הכל', 'ביטול');
+    const ok1 = await showConfirm('זה ימחק את כל הפרויקטים והמשימות!\n\nהאם אתה בטוח?', 'מחיקת כל הנתונים', 'מחק הכל', 'ביטול');
     if (!ok1) return;
     const ok2 = await showConfirm('אישור אחרון — אין דרך חזרה!', 'אישור סופי', 'מחק', 'ביטול');
     if (!ok2) return;
