@@ -719,7 +719,10 @@ input {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 8px;
     margin-bottom: 6px;
+    padding-inline-end: 54px;
+    min-height: 22px;
 }
 
 .card-id {
@@ -830,7 +833,7 @@ input {
 .card-actions {
     position: absolute;
     top: 8px;
-    left: 8px;
+    inset-inline-end: 8px;
     display: flex;
     gap: 4px;
     opacity: 0;
