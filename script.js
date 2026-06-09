@@ -1009,10 +1009,19 @@ function openSortMenu(anchor) {
 
 function positionPopover(pop, anchor) {
     const rect = anchor.getBoundingClientRect();
+    const MIN_W = 220; // matches CSS min-width
     pop.style.position = 'fixed';
     pop.style.top = (rect.bottom + 4) + 'px';
-    pop.style.right = (window.innerWidth - rect.right) + 'px';
     pop.style.zIndex = '500';
+    // If aligning right-edge-to-right-edge would push the popover off the left side,
+    // align the left edge of the popover with the left edge of the anchor instead.
+    if (rect.right - MIN_W < 8) {
+        pop.style.left = Math.max(8, rect.left) + 'px';
+        pop.style.right = 'auto';
+    } else {
+        pop.style.right = (window.innerWidth - rect.right) + 'px';
+        pop.style.left = 'auto';
+    }
 }
 
 function closePopovers() {
