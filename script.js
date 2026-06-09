@@ -380,7 +380,7 @@ async function addTask(data) {
     tasks.push(task);
     saveTasks(tasks);
     loadProjects();
-    renderKanban();
+    rerenderCurrentView();
 }
 
 function updateTask(id, data) {
@@ -400,7 +400,7 @@ function updateTask(id, data) {
     }
     saveTasks(tasks);
     loadProjects();
-    renderKanban();
+    rerenderCurrentView();
 }
 
 async function deleteTask(id, event) {
@@ -411,7 +411,7 @@ async function deleteTask(id, event) {
     const tasks = getAllTasks().filter(t => t.id !== id);
     saveTasks(tasks);
     loadProjects();
-    renderKanban();
+    rerenderCurrentView();
 }
 
 function moveTask(id, newState) {
