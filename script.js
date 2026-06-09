@@ -30,6 +30,98 @@ const DEFAULT_COLUMNS = [
     { id: 'done',    name: 'Closed',   hue: 145 }
 ];
 
+// ===== Custom Dialogs =====
+function _buildDialog({ title, message, inputDefault, buttons }) {
+    return new Promise(resolve => {
+        const overlay = document.createElement('div');
+        overlay.className = 'dialog-overlay';
+
+        const box = document.createElement('div');
+        box.className = 'dialog-box';
+        box.setAttribute('role', 'dialog');
+        box.setAttribute('aria-modal', 'true');
+
+        const titleEl = title ? `<div class="dialog-title">${escapeHtml(title)}</div>` : '';
+        const msgEl   = message ? `<div class="dialog-message">${escapeHtml(message).replace(/\n/g, '<br>')}</div>` : '';
+        const inputEl = inputDefault !== undefined
+            ? `<input id="dialogInput" class="dialog-input field-input" type="text" value="${escapeHtml(inputDefault)}">`
+            : '';
+
+        box.innerHTML = `
+            ${titleEl}
+            ${msgEl}
+            ${inputEl}
+            <div class="dialog-btns"></div>
+        `;
+
+        const btnsEl = box.querySelector('.dialog-btns');
+        buttons.forEach(({ label, value, primary }) => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = primary ? 'btn-primary' : 'btn-secondary';
+            btn.textContent = label;
+            btn.addEventListener('click', () => {
+                overlay.remove();
+                if (inputDefault !== undefined) {
+                    resolve(value === true ? box.querySelector('#dialogInput').value : null);
+                } else {
+                    resolve(value);
+                }
+            });
+            btnsEl.appendChild(btn);
+        });
+
+        overlay.appendChild(box);
+        document.body.appendChild(overlay);
+
+        const input = box.querySelector('#dialogInput');
+        if (input) {
+            input.focus();
+            input.select();
+            input.addEventListener('keydown', e => {
+                if (e.key === 'Enter') btnsEl.querySelector('.btn-primary')?.click();
+                if (e.key === 'Escape') btnsEl.querySelector('.btn-secondary')?.click();
+            });
+        } else {
+            btnsEl.querySelector('.btn-primary')?.focus();
+            overlay.addEventListener('keydown', e => {
+                if (e.key === 'Escape') btnsEl.querySelector('.btn-secondary, .btn-primary')?.click();
+            });
+        }
+    });
+}
+
+function showAlert(message, title) {
+    return _buildDialog({
+        title,
+        message,
+        buttons: [{ label: 'אישור', value: true, primary: true }]
+    });
+}
+
+function showConfirm(message, title, okLabel = 'אישור', cancelLabel = 'ביטול') {
+    return _buildDialog({
+        title,
+        message,
+        buttons: [
+            { label: cancelLabel, value: false, primary: false },
+            { label: okLabel,     value: true,  primary: true  }
+        ]
+    });
+}
+
+function showPrompt(message, defaultValue = '', title) {
+    return _buildDialog({
+        title,
+        message,
+        inputDefault: defaultValue,
+        buttons: [
+            { label: 'ביטול', value: null,  primary: false },
+            { label: 'אישור', value: true,  primary: true  }
+        ]
+    });
+}
+
 // ===== Init =====
 document.addEventListener('DOMContentLoaded', () => {
     initNextTaskId();
@@ -98,13 +190,13 @@ function saveColumns(columns) {
     createBackup();
 }
 
-function addColumn(name) {
+async function addColumn(name) {
     name = (name || '').trim();
     if (!name) return;
     const columns = getColumns();
     const safeName = escapeHtml(name);
     if (columns.find(c => c.name === safeName)) {
-        alert('עמודה עם שם זה כבר קיימת');
+        await showAlert('עמודה עם שם זה כבר קיימת');
         return;
     }
     const id = 'col_' + Date.now();
@@ -113,20 +205,21 @@ function addColumn(name) {
     renderKanban();
 }
 
-function deleteColumn(id) {
+async function deleteColumn(id) {
     const columns = getColumns();
     const col = columns.find(c => c.id === id);
     if (!col) return;
     const tasksInColumn = getAllTasks().filter(t => t.state === id).length;
     if (tasksInColumn > 0) {
-        alert(`לא ניתן למחוק את העמודה "${unescapeForInput(col.name)}" - יש בה ${tasksInColumn} משימות.\nהעבר אותן לעמודה אחרת לפני המחיקה.`);
+        await showAlert(`לא ניתן למחוק את העמודה "${unescapeForInput(col.name)}" - יש בה ${tasksInColumn} משימות.\nהעבר אותן לעמודה אחרת לפני המחיקה.`);
         return;
     }
     if (columns.length <= 1) {
-        alert('חייבת להיות לפחות עמודה אחת');
+        await showAlert('חייבת להיות לפחות עמודה אחת');
         return;
     }
-    if (!confirm(`למחוק את העמודה "${unescapeForInput(col.name)}"?`)) return;
+    const ok = await showConfirm(`למחוק את העמודה "${unescapeForInput(col.name)}"?`);
+    if (!ok) return;
     saveColumns(columns.filter(c => c.id !== id));
     renderKanban();
 }
@@ -153,14 +246,14 @@ function setCurrentProjectId(id) {
 }
 
 // ===== Projects =====
-function addProject(name) {
+async function addProject(name) {
     name = name.trim();
     if (!name) return;
 
     const projects = getProjects();
     const escapedName = escapeHtml(name);
     if (projects.find(p => p.name === escapedName)) {
-        alert('פרויקט עם שם זה כבר קיים');
+        await showAlert('פרויקט עם שם זה כבר קיים');
         return;
     }
 
@@ -182,9 +275,10 @@ function addProject(name) {
     }
 }
 
-function deleteProject(id, event) {
+async function deleteProject(id, event) {
     if (event) event.stopPropagation();
-    if (!confirm('למחוק את הפרויקט וכל המשימות שלו?')) return;
+    const ok = await showConfirm('למחוק את הפרויקט וכל המשימות שלו?', 'מחיקת פרויקט', 'מחק', 'ביטול');
+    if (!ok) return;
 
     const projects = getProjects().filter(p => p.id !== id);
     const tasks = getAllTasks().filter(t => t.projectId !== id);
@@ -256,13 +350,13 @@ function loadProjects() {
 }
 
 // ===== Tasks =====
-function addTask(data) {
+async function addTask(data) {
     if (!currentProjectId) {
-        alert('בחר פרויקט תחילה');
+        await showAlert('בחר פרויקט תחילה');
         return;
     }
     if (!data.title || !data.title.trim()) {
-        alert('כותרת חובה');
+        await showAlert('כותרת חובה');
         return;
     }
 
@@ -309,9 +403,10 @@ function updateTask(id, data) {
     renderKanban();
 }
 
-function deleteTask(id, event) {
+async function deleteTask(id, event) {
     if (event) event.stopPropagation();
-    if (!confirm('למחוק את המשימה?')) return;
+    const ok = await showConfirm('למחוק את המשימה?', 'מחיקת משימה', 'מחק', 'ביטול');
+    if (!ok) return;
 
     const tasks = getAllTasks().filter(t => t.id !== id);
     saveTasks(tasks);
@@ -364,9 +459,9 @@ function renderKanban() {
 
         // Inline rename via dblclick
         const titleEl = colEl.querySelector('.column-title');
-        titleEl.addEventListener('dblclick', () => {
+        titleEl.addEventListener('dblclick', async () => {
             const current = unescapeForInput(col.name);
-            const next = prompt('שם חדש לעמודה:', current);
+            const next = await showPrompt('שם חדש לעמודה:', current);
             if (next !== null && next.trim()) renameColumn(col.id, next);
         });
     });
@@ -377,8 +472,8 @@ function renderKanban() {
     addColBtn.className = 'add-column-btn';
     addColBtn.setAttribute('aria-label', 'הוסף עמודה חדשה');
     addColBtn.innerHTML = '<span>+ עמודה חדשה</span>';
-    addColBtn.addEventListener('click', () => {
-        const name = prompt('שם העמודה החדשה:');
+    addColBtn.addEventListener('click', async () => {
+        const name = await showPrompt('שם העמודה החדשה:');
         if (name && name.trim()) addColumn(name);
     });
     board.appendChild(addColBtn);
@@ -551,9 +646,9 @@ function updateUI() {
 }
 
 // ===== Modal =====
-function openEditModal(taskId, defaultColumnId) {
+async function openEditModal(taskId, defaultColumnId) {
     if (!currentProjectId) {
-        alert('בחר פרויקט תחילה');
+        await showAlert('בחר פרויקט תחילה');
         return;
     }
 
@@ -664,10 +759,10 @@ function formatDueDate(isoDate) {
     return { display: `${display}|${isoDate}`, dueIn };
 }
 
-function saveTaskFromModal(taskId) {
+async function saveTaskFromModal(taskId) {
     const title = document.getElementById('modalTitle').value;
     if (!title.trim()) {
-        alert('כותרת חובה');
+        await showAlert('כותרת חובה');
         return;
     }
 
@@ -1067,40 +1162,49 @@ function exportData() {
 function importData(file) {
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
         try {
             const data = JSON.parse(e.target.result);
             if (!Array.isArray(data.projects) || !Array.isArray(data.tasks)) {
-                alert('קובץ לא תקין');
+                await showAlert('קובץ לא תקין');
                 return;
             }
-            if (!confirm(`לייבא ${data.projects.length} פרויקטים ו-${data.tasks.length} משימות? זה יחליף את הנתונים הקיימים.`)) return;
+            const ok = await showConfirm(
+                `לייבא ${data.projects.length} פרויקטים ו-${data.tasks.length} משימות?\nזה יחליף את הנתונים הקיימים.`,
+                'ייבוא נתונים', 'ייבא', 'ביטול'
+            );
+            if (!ok) return;
             localStorage.setItem(DB.projects, JSON.stringify(data.projects));
             localStorage.setItem(DB.tasks, JSON.stringify(data.tasks));
             createBackup();
             location.reload();
         } catch (err) {
-            alert('שגיאה בקריאת הקובץ: ' + err.message);
+            await showAlert('שגיאה בקריאת הקובץ: ' + err.message);
         }
     };
     reader.readAsText(file);
 }
 
-function showBackupInfo() {
+async function showBackupInfo() {
     closePopovers();
     const b = localStorage.getItem(DB.backup);
     if (!b) {
-        alert('אין גיבוי זמין');
+        await showAlert('אין גיבוי זמין');
         return;
     }
     const backup = JSON.parse(b);
-    alert(`גיבוי אחרון: ${new Date(backup.timestamp).toLocaleString('he-IL')}\n${backup.projects.length} פרויקטים, ${backup.tasks.length} משימות`);
+    await showAlert(
+        `גיבוי אחרון: ${new Date(backup.timestamp).toLocaleString('he-IL')}\n${backup.projects.length} פרויקטים, ${backup.tasks.length} משימות`,
+        'פרטי גיבוי'
+    );
 }
 
-function clearAllData() {
+async function clearAllData() {
     closePopovers();
-    if (!confirm('⚠️ זה ימחק את כל הפרויקטים והמשימות!\n\nהאם אתה בטוח?')) return;
-    if (!confirm('אישור אחרון - אין דרך חזרה!')) return;
+    const ok1 = await showConfirm('⚠️ זה ימחק את כל הפרויקטים והמשימות!\n\nהאם אתה בטוח?', 'מחיקת כל הנתונים', 'מחק הכל', 'ביטול');
+    if (!ok1) return;
+    const ok2 = await showConfirm('אישור אחרון — אין דרך חזרה!', 'אישור סופי', 'מחק', 'ביטול');
+    if (!ok2) return;
     [DB.projects, DB.tasks, DB.backup, DB.currentProject].forEach(k => localStorage.removeItem(k));
     location.reload();
 }

@@ -882,6 +882,62 @@ input {
     animation: fadeIn 0.2s ease-out;
 }
 
+/* ===== Custom Dialog ===== */
+.dialog-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(24, 20, 16, 0.45);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    animation: fadeIn 0.15s ease-out;
+}
+
+.dialog-box {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-xl);
+    padding: 24px;
+    min-width: 320px;
+    max-width: 440px;
+    width: 90%;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.14);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    animation: slideUp 0.18s ease-out;
+}
+
+.dialog-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--ink);
+}
+
+.dialog-message {
+    font-size: 13.5px;
+    color: var(--ink-s);
+    line-height: 1.6;
+}
+
+.dialog-input {
+    width: 100%;
+}
+
+.dialog-btns {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-top: 4px;
+}
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(10px) scale(0.97); }
+    to   { opacity: 1; transform: none; }
+}
+
 @keyframes fadeIn {
     from { opacity: 0; }
     to { opacity: 1; }
