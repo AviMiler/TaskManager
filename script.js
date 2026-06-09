@@ -800,7 +800,7 @@ function renderList() {
                         <td><span class="state-pill" style="--col-hue: ${stateHue(t.state)};">${stateLabel(t.state)}</span></td>
                         <td><span class="priority priority-${t.priority || 'med'}">${priLabels[t.priority] || 'בינוני'}</span></td>
                         <td>${t.tag ? `<span class="tag tag-${KNOWN_TAGS.includes(t.tag) ? t.tag : 'default'}">${t.tag}</span>` : ''}</td>
-                        <td>${t.assignee ? `<div class="avatar avatar-sm" style="--hue: ${nameHue(t.assignee)};" title="${t.assignee}">${initials(t.assignee)}</div>` : ''}</td>
+                        <td>${t.assignee ? `<span class="list-assignee">${t.assignee}</span>` : ''}</td>
                         <td>${t.due || ''}</td>
                         <td>
                             <button class="card-action-btn" type="button" aria-label="ערוך" onclick="openEditModal(${t.id})">✎</button>

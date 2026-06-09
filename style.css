@@ -1312,6 +1312,11 @@ input {
     margin-inline-start: auto;
 }
 
+.list-assignee {
+    font-size: 13px;
+    color: var(--ink-s);
+}
+
 .list-project {
     font-size: 12px;
     color: var(--ink-s);
