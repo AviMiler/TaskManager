@@ -318,6 +318,27 @@ input {
     color: var(--blue-d);
 }
 
+.project-settings-btn {
+    width: 18px;
+    height: 18px;
+    border-radius: 4px;
+    color: var(--ink-f);
+    opacity: 0;
+    transition: opacity 0.15s, background 0.15s, color 0.15s;
+    display: grid;
+    place-items: center;
+    font-size: 13px;
+}
+
+.project-item:hover .project-settings-btn {
+    opacity: 1;
+}
+
+.project-settings-btn:hover {
+    background: #f0f7ff;
+    color: var(--blue);
+}
+
 .project-delete-btn {
     width: 18px;
     height: 18px;

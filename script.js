@@ -335,6 +335,95 @@ async function deleteProject(id, event) {
     updateUI();
 }
 
+function openProjectSettings(id, event) {
+    if (event) event.stopPropagation();
+    const project = getProjects().find(p => p.id === id);
+    if (!project) return;
+
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.id = 'projectSettingsModal';
+
+    overlay.innerHTML = `
+        <div class="modal" onclick="event.stopPropagation()" style="max-width: 480px;">
+            <div class="modal-header">
+                <h2 class="modal-title">הגדרות פרויקט</h2>
+                <button class="modal-close" type="button" aria-label="סגור" onclick="closeProjectSettings()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="field">
+                    <label class="field-label">שם הפרויקט *</label>
+                    <input type="text" id="projectName" class="field-input" value="${project.name}" placeholder="שם הפרויקט">
+                </div>
+                <div class="field">
+                    <label class="field-label">תיאור</label>
+                    <textarea id="projectDescription" class="field-textarea" placeholder="תיאור הפרויקט...">${project.description || ''}</textarea>
+                </div>
+                <div class="field">
+                    <label class="field-label">צבע פרויקט</label>
+                    <div class="color-swatches">
+                        ${HUES.map((hue, idx) => `<button class="color-swatch${idx === project.hueIdx ? ' selected' : ''}" type="button" data-hue-idx="${idx}" style="background: hsl(${hue}, 70%, 55%);" aria-label="צבע ${idx}"></button>`).join('')}
+                    </div>
+                </div>
+                <div class="field">
+                    <label class="field-label">סטטוס</label>
+                    <select id="projectStatus" class="field-select">
+                        <option value="active" ${(project.status || 'active') === 'active' ? 'selected' : ''}>פעיל</option>
+                        <option value="archived" ${project.status === 'archived' ? 'selected' : ''}>בארכיון</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeProjectSettings()">ביטול</button>
+                <button class="btn-primary" onclick="saveProjectSettings(${id})">שמור</button>
+            </div>
+        </div>
+    `;
+
+    overlay.onclick = () => closeProjectSettings();
+    document.body.appendChild(overlay);
+
+    // Wire up color swatch clicks
+    overlay.querySelectorAll('.color-swatch').forEach(swatch => {
+        swatch.addEventListener('click', function() {
+            overlay.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
+            this.classList.add('selected');
+        });
+    });
+}
+
+function closeProjectSettings() {
+    const m = document.getElementById('projectSettingsModal');
+    if (m) m.remove();
+}
+
+function saveProjectSettings(id) {
+    const name = document.getElementById('projectName').value.trim();
+    if (!name) {
+        showAlert('שם הפרויקט חובה');
+        return;
+    }
+
+    const description = document.getElementById('projectDescription').value.trim();
+    const status = document.getElementById('projectStatus').value;
+    const selectedSwatch = document.querySelector('.color-swatch.selected');
+    const hueIdx = selectedSwatch ? parseInt(selectedSwatch.dataset.hueIdx) : 0;
+
+    const projects = getProjects();
+    const project = projects.find(p => p.id === id);
+    if (!project) return;
+
+    project.name = escapeHtml(name);
+    project.description = escapeHtml(description);
+    project.status = status;
+    project.hueIdx = hueIdx;
+
+    saveProjects(projects);
+    closeProjectSettings();
+    loadProjects();
+    updateUI();
+}
+
 function selectProject(id) {
     currentProjectId = id;
     setCurrentProjectId(id);
@@ -382,6 +471,7 @@ function loadProjects() {
             <span class="project-dot"></span>
             <span class="project-name">${p.name}</span>
             <span class="project-count">${taskCount}</span>
+            <button class="project-settings-btn" onclick="openProjectSettings(${p.id}, event)" title="הגדרות">⚙</button>
             <button class="project-delete-btn" onclick="deleteProject(${p.id}, event)" title="מחק">×</button>
         `;
         list.appendChild(el);
@@ -1809,6 +1899,9 @@ function escapeAttr(text) {
 window.deleteProject = deleteProject;
 window.deleteTask = deleteTask;
 window.openEditModal = openEditModal;
+window.openProjectSettings = openProjectSettings;
+window.closeProjectSettings = closeProjectSettings;
+window.saveProjectSettings = saveProjectSettings;
 window.saveTaskFromModal = saveTaskFromModal;
 window.closeModal = closeModal;
 window.setFilter = setFilter;
