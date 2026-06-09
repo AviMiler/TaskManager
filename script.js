@@ -4,7 +4,8 @@ const DB = {
     tasks: 'tb_tasks',
     backup: 'tb_backup',
     currentProject: 'tb_currentProject',
-    columns: 'tb_columns'
+    columns: 'tb_columns',
+    taskTypes: 'tb_task_types'
 };
 
 let currentProjectId = null;
@@ -208,6 +209,21 @@ function saveColumns(columns) {
     createBackup();
 }
 
+function getTaskTypes() {
+    const d = localStorage.getItem(DB.taskTypes);
+    if (!d) { saveTaskTypes(DEFAULT_TASK_TYPES); return DEFAULT_TASK_TYPES.slice(); }
+    try {
+        const ts = JSON.parse(d);
+        if (Array.isArray(ts) && ts.length > 0) return ts;
+    } catch (e) {}
+    saveTaskTypes(DEFAULT_TASK_TYPES);
+    return DEFAULT_TASK_TYPES.slice();
+}
+
+function saveTaskTypes(types) {
+    localStorage.setItem(DB.taskTypes, JSON.stringify(types));
+}
+
 async function addColumn(name) {
     name = (name || '').trim();
     if (!name) return;
@@ -389,6 +405,7 @@ async function addTask(data) {
         assignee: escapeHtml((data.assignee || '').trim()),
         due: escapeHtml((data.due || '').trim()),
         dueIn: data.dueIn !== undefined ? data.dueIn : null,
+        taskType: data.taskType || '',
         comments: 0,
         attachments: 0,
         createdAt: new Date().toISOString()
@@ -416,6 +433,7 @@ function updateTask(id, data) {
         task.due = escapeHtml(data.due.trim());
         task.dueIn = data.dueIn !== undefined ? data.dueIn : null;
     }
+    if (data.taskType !== undefined) task.taskType = data.taskType;
     saveTasks(tasks);
     loadProjects();
     rerenderCurrentView();
@@ -555,6 +573,7 @@ function buildCard(task) {
     const tagClass = KNOWN_TAGS.includes(task.tag) ? `tag-${task.tag}` : 'tag-default';
     const overdueSoon = task.dueIn !== null && task.dueIn !== undefined && task.dueIn <= 7;
     const idStr = String(task.id).padStart(4, '0');
+    const typeInfo = task.taskType ? getTaskTypes().find(ty => ty.id === task.taskType) : null;
 
     card.innerHTML = `
         <span class="card-stripe"></span>
@@ -563,7 +582,10 @@ function buildCard(task) {
             <button class="card-action-btn delete" onclick="deleteTask(${task.id}, event)" title="מחק">×</button>
         </div>
         <div class="card-top">
-            ${task.tag ? `<span class="tag ${tagClass}">${task.tag}</span>` : '<span></span>'}
+            <div class="card-badges">
+                ${typeInfo ? `<span class="task-type-badge" style="--type-hue: ${typeInfo.hue};">${typeInfo.name}</span>` : ''}
+                ${task.tag ? `<span class="tag ${tagClass}">${task.tag}</span>` : ''}
+            </div>
             <span class="card-id">#${idStr}</span>
         </div>
         <div class="card-title ${isLastCol ? 'done' : ''}">${task.title}</div>
@@ -690,7 +712,7 @@ function buildModal(task, isNew, defaultColumnId) {
 
     const columns = getColumns();
     const fallbackState = defaultColumnId || (columns[0] && columns[0].id) || 'todo';
-    const t = task || { title: '', description: '', state: fallbackState, priority: 'med', tag: '', assignee: '', due: '', dueIn: null };
+    const t = task || { title: '', description: '', state: fallbackState, priority: 'med', tag: '', assignee: '', due: '', dueIn: null, taskType: '' };
 
     const stateOptions = columns.map(c =>
         `<option value="${c.id}" ${t.state === c.id ? 'selected' : ''}>${c.name}</option>`
@@ -729,17 +751,26 @@ function buildModal(task, isNew, defaultColumnId) {
                 </div>
                 <div class="field-row">
                     <div class="field">
+                        <label class="field-label">סוג משימה</label>
+                        <select id="modalType" class="field-select">
+                            <option value="">— ללא —</option>
+                            ${getTaskTypes().map(ty => `<option value="${ty.id}" ${t.taskType === ty.id ? 'selected' : ''}>${ty.name}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="field">
                         <label class="field-label">תגית</label>
                         <input type="text" id="modalTag" class="field-input" value="${unescapeForInput(t.tag)}" placeholder="מסמכים, פגישה...">
                     </div>
+                </div>
+                <div class="field-row">
                     <div class="field">
                         <label class="field-label">אחראי</label>
                         <input type="text" id="modalAssignee" class="field-input" value="${unescapeForInput(t.assignee)}" placeholder="שם מלא">
                     </div>
-                </div>
-                <div class="field">
-                    <label class="field-label">תאריך יעד</label>
-                    <input type="date" id="modalDueDate" class="field-input" value="${parseDueDate(t.due)}">
+                    <div class="field">
+                        <label class="field-label">תאריך יעד</label>
+                        <input type="date" id="modalDueDate" class="field-input" value="${parseDueDate(t.due)}">
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -797,7 +828,8 @@ async function saveTaskFromModal(taskId) {
         tag: document.getElementById('modalTag').value,
         assignee: document.getElementById('modalAssignee').value,
         due: isoDate ? dueDisplay : '',
-        dueIn: dueInfo.dueIn
+        dueIn: dueInfo.dueIn,
+        taskType: document.getElementById('modalType').value,
     };
 
     if (taskId === null || taskId === undefined) {
@@ -894,6 +926,7 @@ function renderList() {
             <thead>
                 <tr>
                     <th>ID</th>
+                    <th>סוג</th>
                     <th>כותרת</th>
                     ${isAll ? '<th>פרויקט</th>' : ''}
                     <th>מצב</th>
@@ -908,6 +941,7 @@ function renderList() {
                 ${rawTasks.map(t => `
                     <tr data-id="${t.id}" class="list-row ${t.state === lastColId ? 'done' : ''}">
                         <td class="list-id">#${String(t.id).padStart(4, '0')}</td>
+                        <td>${t.taskType ? (() => { const ty = getTaskTypes().find(x => x.id === t.taskType); return ty ? `<span class="task-type-badge" style="--type-hue: ${ty.hue};">${ty.name}</span>` : ''; })() : ''}</td>
                         <td class="list-title">${t.title}</td>
                         ${isAll ? `<td class="list-project">${projectMap[t.projectId] || '—'}</td>` : ''}
                         <td><span class="state-pill" style="--col-hue: ${stateHue(t.state)};">${stateLabel(t.state)}</span></td>
@@ -1170,6 +1204,92 @@ function openUserMenu(anchor) {
     document.body.appendChild(pop);
 }
 
+function openManageTypesModal() {
+    closePopovers();
+
+    const renderList = (container) => {
+        const types = getTaskTypes();
+        container.innerHTML = types.length === 0
+            ? '<div style="color:var(--ink-f);font-size:13px;padding:12px 0;">אין סוגים מוגדרים</div>'
+            : types.map(ty => `
+                <div class="manage-type-row">
+                    <span class="task-type-badge" style="--type-hue: ${ty.hue};">${ty.name}</span>
+                    <button class="manage-type-delete" type="button" data-type-id="${ty.id}" aria-label="מחק">×</button>
+                </div>
+            `).join('');
+
+        container.querySelectorAll('.manage-type-delete').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const id = btn.dataset.typeId;
+                const type = getTaskTypes().find(x => x.id === id);
+                const usedCount = getAllTasks().filter(x => x.taskType === id).length;
+                if (usedCount > 0) {
+                    const ok = await showConfirm(
+                        `הסוג "${type.name}" משמש ב-${usedCount} משימות. למחוק?`,
+                        'מחיקת סוג', 'מחק', 'ביטול'
+                    );
+                    if (!ok) return;
+                    saveTasks(getAllTasks().map(t => t.taskType === id ? { ...t, taskType: '' } : t));
+                }
+                saveTaskTypes(getTaskTypes().filter(x => x.id !== id));
+                renderList(container);
+            });
+        });
+    };
+
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.id = 'manageTypesModal';
+    overlay.innerHTML = `
+        <div class="modal" onclick="event.stopPropagation()" style="max-width:400px;">
+            <div class="modal-header">
+                <h2 class="modal-title">ניהול סוגי משימות</h2>
+                <button class="modal-close" type="button" aria-label="סגור" onclick="closeManageTypesModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div id="typesList"></div>
+                <div class="manage-type-add">
+                    <input type="text" id="newTypeName" class="field-input" placeholder="שם הסוג החדש...">
+                    <button class="btn-primary" type="button" id="addTypeBtn">הוסף</button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-primary" type="button" onclick="closeManageTypesModal()">סגור</button>
+            </div>
+        </div>
+    `;
+
+    overlay.onclick = () => closeManageTypesModal();
+    document.body.appendChild(overlay);
+
+    const container = overlay.querySelector('#typesList');
+    renderList(container);
+
+    const addBtn = overlay.querySelector('#addTypeBtn');
+    const nameInput = overlay.querySelector('#newTypeName');
+    const doAdd = async () => {
+        const name = nameInput.value.trim();
+        if (!name) return;
+        const types = getTaskTypes();
+        if (types.find(x => x.name.toLowerCase() === name.toLowerCase())) {
+            await showAlert('סוג עם שם זה כבר קיים');
+            return;
+        }
+        const hue = (types.length * 67 + 30) % 360;
+        types.push({ id: 'type_' + Date.now(), name, hue });
+        saveTaskTypes(types);
+        nameInput.value = '';
+        renderList(container);
+    };
+    addBtn.addEventListener('click', doAdd);
+    nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') doAdd(); });
+}
+
+function closeManageTypesModal() {
+    const m = document.getElementById('manageTypesModal');
+    if (m) m.remove();
+}
+
 // ===== Settings actions =====
 function exportData() {
     closePopovers();
@@ -1344,3 +1464,5 @@ window.showBackupInfo = showBackupInfo;
 window.clearAllData = clearAllData;
 window.jumpToTask = jumpToTask;
 window.setListScope = setListScope;
+window.openManageTypesModal = openManageTypesModal;
+window.closeManageTypesModal = closeManageTypesModal;
