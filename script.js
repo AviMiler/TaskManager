@@ -12,6 +12,7 @@ let editingTaskId = null;
 let draggingTaskId = null;
 let nextTaskId = 1000;
 let currentView = 'kanban'; // 'kanban' | 'list'
+let listScope = 'current'; // 'current' | 'all'
 let activeFilters = { priority: null, tag: null, assignee: null };
 let activeSort = 'created-desc'; // 'created-desc' | 'created-asc' | 'priority' | 'title' | 'due'
 
@@ -531,6 +532,16 @@ function updateUI() {
             return;
         }
     }
+    // No project selected — still show list if in list view (can show all projects)
+    if (currentView === 'list') {
+        title.textContent = 'כל המשימות';
+        breadcrumb.textContent = 'Workspace';
+        subtitle.textContent = '';
+        board.style.display = 'none';
+        empty.style.display = 'none';
+        setView('list');
+        return;
+    }
     title.textContent = 'בחר פרויקט';
     breadcrumb.textContent = 'Workspace';
     subtitle.textContent = 'כדי להתחיל, בחר או צור פרויקט';
@@ -722,7 +733,7 @@ function setView(view) {
             board.parentNode.insertBefore(list, board.nextSibling);
         }
         list.style.display = 'block';
-        if (currentProjectId) renderList();
+        renderList();
     } else {
         if (list) list.style.display = 'none';
         if (currentProjectId) {
@@ -732,35 +743,46 @@ function setView(view) {
     }
 }
 
+function setListScope(scope) {
+    listScope = scope;
+    document.querySelectorAll('.list-scope-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.scope === scope);
+    });
+    renderList();
+}
+
 function renderList() {
-    if (!currentProjectId) return;
     const list = document.getElementById('listView');
     if (!list) return;
 
-    const tasks = applyFiltersAndSort(getTasks(currentProjectId));
-    if (tasks.length === 0) {
-        list.innerHTML = '<div class="list-empty">אין משימות להצגה</div>';
-        return;
-    }
+    const isAll = listScope === 'all';
+    const projects = getProjects();
+    const projectMap = Object.fromEntries(projects.map(p => [p.id, p.name]));
+
+    const rawTasks = isAll ? applyFiltersAndSort(getAllTasks()) : (currentProjectId ? applyFiltersAndSort(getTasks(currentProjectId)) : []);
 
     const columns = getColumns();
-    const stateLabel = (id) => {
-        const c = columns.find(x => x.id === id);
-        return c ? c.name : id;
-    };
-    const stateHue = (id) => {
-        const c = columns.find(x => x.id === id);
-        return c ? c.hue : 220;
-    };
+    const stateLabel = (id) => (columns.find(x => x.id === id) || {}).name || id;
+    const stateHue  = (id) => (columns.find(x => x.id === id) || {}).hue  || 220;
     const lastColId = columns.length ? columns[columns.length - 1].id : null;
     const priLabels = { high: 'גבוה', med: 'בינוני', low: 'נמוך' };
 
     list.innerHTML = `
-        <table class="list-table">
+        <div class="list-toolbar">
+            <div class="list-scope-toggle">
+                <button class="list-scope-btn ${listScope === 'current' ? 'active' : ''}" data-scope="current" onclick="setListScope('current')" type="button">פרויקט נוכחי</button>
+                <button class="list-scope-btn ${listScope === 'all' ? 'active' : ''}" data-scope="all" onclick="setListScope('all')" type="button">כל הפרויקטים</button>
+            </div>
+            <span class="list-count">${rawTasks.length} משימות</span>
+        </div>
+        ${rawTasks.length === 0
+            ? '<div class="list-empty">אין משימות להצגה</div>'
+            : `<table class="list-table">
             <thead>
                 <tr>
                     <th>ID</th>
                     <th>כותרת</th>
+                    ${isAll ? '<th>פרויקט</th>' : ''}
                     <th>מצב</th>
                     <th>תעדוף</th>
                     <th>תגית</th>
@@ -770,10 +792,11 @@ function renderList() {
                 </tr>
             </thead>
             <tbody>
-                ${tasks.map(t => `
+                ${rawTasks.map(t => `
                     <tr data-id="${t.id}" class="list-row ${t.state === lastColId ? 'done' : ''}">
                         <td class="list-id">#${String(t.id).padStart(4, '0')}</td>
                         <td class="list-title">${t.title}</td>
+                        ${isAll ? `<td class="list-project">${projectMap[t.projectId] || '—'}</td>` : ''}
                         <td><span class="state-pill" style="--col-hue: ${stateHue(t.state)};">${stateLabel(t.state)}</span></td>
                         <td><span class="priority priority-${t.priority || 'med'}">${priLabels[t.priority] || 'בינוני'}</span></td>
                         <td>${t.tag ? `<span class="tag tag-${KNOWN_TAGS.includes(t.tag) ? t.tag : 'default'}">${t.tag}</span>` : ''}</td>
@@ -786,7 +809,7 @@ function renderList() {
                     </tr>
                 `).join('')}
             </tbody>
-        </table>
+        </table>`}
     `;
 }
 
@@ -1188,3 +1211,4 @@ window.exportData = exportData;
 window.showBackupInfo = showBackupInfo;
 window.clearAllData = clearAllData;
 window.jumpToTask = jumpToTask;
+window.setListScope = setListScope;
