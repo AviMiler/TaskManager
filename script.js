@@ -23,6 +23,9 @@ const HUES = [230, 160, 40, 290, 0, 60, 120, 180, 260, 320];
 // Tag colors known (Hebrew)
 const KNOWN_TAGS = ['מסמכים', 'פגישה', 'פנימי', 'bug', 'feature'];
 
+// Preset hues for color picker
+const PRESET_HUES = [0, 25, 50, 100, 140, 175, 210, 250, 275, 320];
+
 // Default kanban columns
 const DEFAULT_COLUMNS = [
     { id: 'todo',    name: 'To Do',    hue: 220 },
@@ -1283,19 +1286,46 @@ function openUserMenu(anchor) {
     document.body.appendChild(pop);
 }
 
+function buildColorSwatches(selectedHue) {
+    return `<div class="color-swatches">
+        ${PRESET_HUES.map(h => `<button class="color-swatch${h === selectedHue ? ' selected' : ''}" type="button" data-hue="${h}" style="--sw-hue:${h};" aria-label="גוון ${h}"></button>`).join('')}
+    </div>`;
+}
+
 function openManageTypesModal() {
     closePopovers();
 
     const renderList = (container) => {
         const types = getTaskTypes();
-        container.innerHTML = types.length === 0
-            ? '<div style="color:var(--ink-f);font-size:13px;padding:12px 0;">אין סוגים מוגדרים</div>'
-            : types.map(ty => `
-                <div class="manage-type-row">
-                    <span class="task-type-badge" style="--type-hue: ${ty.hue};">${ty.name}</span>
+        if (types.length === 0) {
+            container.innerHTML = '<div style="color:var(--ink-f);font-size:13px;padding:12px 0;">אין סוגים מוגדרים</div>';
+            return;
+        }
+        container.innerHTML = types.map(ty => `
+            <div class="manage-type-row" data-type-id="${ty.id}">
+                <span class="task-type-badge" style="--type-hue:${ty.hue};">${ty.name}</span>
+                <div class="manage-type-row-actions">
+                    <div class="color-swatches color-swatches-inline">
+                        ${PRESET_HUES.map(h => `<button class="color-swatch${h === ty.hue ? ' selected' : ''}" type="button" data-hue="${h}" data-type-id="${ty.id}" style="--sw-hue:${h};"></button>`).join('')}
+                    </div>
                     <button class="manage-type-delete" type="button" data-type-id="${ty.id}" aria-label="מחק">×</button>
                 </div>
-            `).join('');
+            </div>
+        `).join('');
+
+        // Color change for existing types
+        container.querySelectorAll('.color-swatch[data-type-id]').forEach(swatch => {
+            swatch.addEventListener('click', () => {
+                const id = swatch.dataset.typeId;
+                const hue = Number(swatch.dataset.hue);
+                const types = getTaskTypes();
+                const ty = types.find(x => x.id === id);
+                if (!ty) return;
+                ty.hue = hue;
+                saveTaskTypes(types);
+                renderList(container);
+            });
+        });
 
         container.querySelectorAll('.manage-type-delete').forEach(btn => {
             btn.addEventListener('click', async () => {
@@ -1320,7 +1350,7 @@ function openManageTypesModal() {
     overlay.className = 'modal-overlay';
     overlay.id = 'manageTypesModal';
     overlay.innerHTML = `
-        <div class="modal" onclick="event.stopPropagation()" style="max-width:400px;">
+        <div class="modal" onclick="event.stopPropagation()" style="max-width:440px;">
             <div class="modal-header">
                 <h2 class="modal-title">ניהול סוגי משימות</h2>
                 <button class="modal-close" type="button" aria-label="סגור" onclick="closeManageTypesModal()">×</button>
@@ -1328,8 +1358,14 @@ function openManageTypesModal() {
             <div class="modal-body">
                 <div id="typesList"></div>
                 <div class="manage-type-add">
-                    <input type="text" id="newTypeName" class="field-input" placeholder="שם הסוג החדש...">
-                    <button class="btn-primary" type="button" id="addTypeBtn">הוסף</button>
+                    <div class="manage-type-add-row">
+                        <input type="text" id="newTypeName" class="field-input" placeholder="שם הסוג החדש...">
+                        <button class="btn-primary" type="button" id="addTypeBtn">הוסף</button>
+                    </div>
+                    <div class="manage-type-add-color">
+                        <span class="field-label" style="font-size:11px;">צבע:</span>
+                        ${buildColorSwatches(PRESET_HUES[5])}
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -1344,6 +1380,15 @@ function openManageTypesModal() {
     const container = overlay.querySelector('#typesList');
     renderList(container);
 
+    // Track selected hue for new type
+    let selectedHue = PRESET_HUES[5];
+    overlay.querySelectorAll('.manage-type-add .color-swatch').forEach(swatch => {
+        swatch.addEventListener('click', () => {
+            selectedHue = Number(swatch.dataset.hue);
+            overlay.querySelectorAll('.manage-type-add .color-swatch').forEach(s => s.classList.toggle('selected', Number(s.dataset.hue) === selectedHue));
+        });
+    });
+
     const addBtn = overlay.querySelector('#addTypeBtn');
     const nameInput = overlay.querySelector('#newTypeName');
     const doAdd = async () => {
@@ -1354,8 +1399,7 @@ function openManageTypesModal() {
             await showAlert('סוג עם שם זה כבר קיים');
             return;
         }
-        const hue = (types.length * 67 + 30) % 360;
-        types.push({ id: 'type_' + Date.now(), name, hue });
+        types.push({ id: 'type_' + Date.now(), name, hue: selectedHue });
         saveTaskTypes(types);
         nameInput.value = '';
         renderList(container);

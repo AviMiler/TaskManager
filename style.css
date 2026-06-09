@@ -1503,12 +1503,19 @@ input {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 6px 0;
+    padding: 7px 0;
     border-bottom: 1px solid var(--line);
+    gap: 8px;
 }
 
 .manage-type-row:last-child {
     border-bottom: none;
+}
+
+.manage-type-row-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .manage-type-delete {
@@ -1520,6 +1527,7 @@ input {
     display: grid;
     place-items: center;
     transition: background 0.12s, color 0.12s;
+    flex-shrink: 0;
 }
 
 .manage-type-delete:hover {
@@ -1529,12 +1537,59 @@ input {
 
 .manage-type-add {
     display: flex;
+    flex-direction: column;
     gap: 8px;
-    margin-top: 12px;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--line);
 }
 
-.manage-type-add .field-input {
+.manage-type-add-row {
+    display: flex;
+    gap: 8px;
+}
+
+.manage-type-add-row .field-input {
     flex: 1;
+}
+
+.manage-type-add-color {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* ===== Color Swatches ===== */
+.color-swatches {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+
+.color-swatches-inline {
+    gap: 3px;
+}
+
+.color-swatch {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: hsl(var(--sw-hue), 65%, 55%);
+    border: 2px solid transparent;
+    outline: none;
+    transition: transform 0.1s, border-color 0.1s, box-shadow 0.1s;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.color-swatch:hover {
+    transform: scale(1.2);
+}
+
+.color-swatch.selected {
+    border-color: var(--ink);
+    box-shadow: 0 0 0 1px var(--surface);
+    transform: scale(1.1);
 }
 
 /* ===== Global Search Results ===== */
