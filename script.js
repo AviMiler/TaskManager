@@ -957,7 +957,7 @@ function openSearchResults(term) {
         panel.innerHTML = `<div class="search-empty">אין תוצאות עבור "<strong>${escapeHtml(term)}</strong>"</div>`;
     } else {
         panel.innerHTML = `
-            <div class="search-header">${total} תוצאות</div>
+            <div class="search-header" onclick="openSearchPage('${escapeAttr(term)}')" style="cursor: pointer; user-select: none;">${total} תוצאות</div>
             ${matches.map(t => {
                 const proj = projectMap[t.projectId];
                 const ty   = t.taskType ? typeMap[t.taskType] : null;

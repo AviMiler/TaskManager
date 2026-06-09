@@ -1616,6 +1616,11 @@ input {
     text-transform: uppercase;
     letter-spacing: 0.5px;
     border-bottom: 1px solid var(--line);
+    transition: background-color 0.1s, color 0.1s;
+}
+.search-header:hover {
+    background-color: var(--bg);
+    color: var(--blue);
 }
 
 .search-row {
