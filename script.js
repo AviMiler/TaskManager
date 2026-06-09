@@ -352,34 +352,128 @@ function restoreCurrentProject() {
 function loadProjects() {
     const list = document.getElementById('projectsList');
     const projects = getProjects();
-    document.getElementById('projectCount').textContent = projects.length;
 
     list.innerHTML = '';
 
     if (projects.length === 0) {
-        list.innerHTML = '<div style="padding: 16px 12px; text-align: center; color: var(--ink-f); font-size: 12px;">אין פרויקטים עדיין</div>';
+        list.innerHTML = '<div style="padding: 12px; text-align: center; color: var(--ink-f); font-size: 12px;">אין פרויקטים עדיין</div>';
+    } else {
+        const cols = getColumns();
+        const lastColId = cols.length ? cols[cols.length - 1].id : null;
+        projects.forEach((p) => {
+            const taskCount = getTasks(p.id).filter(t => t.state !== lastColId).length;
+            const isActive = p.id === currentProjectId;
+            const hue = HUES[p.hueIdx || 0];
+
+            const el = document.createElement('div');
+            el.className = `project-item ${isActive ? 'active' : ''}`;
+            el.style.setProperty('--hue', hue);
+            el.setAttribute('role', 'option');
+            el.setAttribute('aria-selected', isActive ? 'true' : 'false');
+            el.onclick = () => { selectProject(p.id); closeProjectDropdown(); };
+            el.innerHTML = `
+                <span class="project-dot"></span>
+                <span class="project-name">${p.name}</span>
+                <span class="project-count">${taskCount}</span>
+                <button class="project-delete-btn" onclick="deleteProject(${p.id}, event)" title="מחק">×</button>
+            `;
+            list.appendChild(el);
+        });
+    }
+
+    updateSelectorButton();
+    renderProjectDetails();
+}
+
+function updateSelectorButton() {
+    const btn = document.getElementById('projectSelectorBtn');
+    const dot = document.getElementById('selectorDot');
+    const nameEl = document.getElementById('selectorProjectName');
+    if (!btn || !dot || !nameEl) return;
+
+    if (currentProjectId) {
+        const project = getProjects().find(p => p.id === currentProjectId);
+        if (project) {
+            const hue = HUES[project.hueIdx || 0];
+            dot.style.setProperty('--hue', hue);
+            dot.style.background = `oklch(0.72 0.12 ${hue})`;
+            nameEl.textContent = project.name;
+            return;
+        }
+    }
+    dot.style.background = 'var(--line-h)';
+    nameEl.textContent = 'בחר פרויקט';
+}
+
+function renderProjectDetails() {
+    const panel = document.getElementById('projectDetails');
+    if (!panel) return;
+
+    if (!currentProjectId) {
+        panel.innerHTML = '<div class="project-details-empty">בחר פרויקט להצגת פרטים</div>';
         return;
     }
 
-    const cols = getColumns();
-    const lastColId = cols.length ? cols[cols.length - 1].id : null;
-    projects.forEach((p) => {
-        const taskCount = getTasks(p.id).filter(t => t.state !== lastColId).length;
-        const isActive = p.id === currentProjectId;
-        const hue = HUES[p.hueIdx || 0];
+    const project = getProjects().find(p => p.id === currentProjectId);
+    if (!project) {
+        panel.innerHTML = '<div class="project-details-empty">בחר פרויקט להצגת פרטים</div>';
+        return;
+    }
 
-        const el = document.createElement('div');
-        el.className = `project-item ${isActive ? 'active' : ''}`;
-        el.style.setProperty('--hue', hue);
-        el.onclick = () => selectProject(p.id);
-        el.innerHTML = `
-            <span class="project-dot"></span>
-            <span class="project-name">${p.name}</span>
-            <span class="project-count">${taskCount}</span>
-            <button class="project-delete-btn" onclick="deleteProject(${p.id}, event)" title="מחק">×</button>
-        `;
-        list.appendChild(el);
-    });
+    const hue = HUES[project.hueIdx || 0];
+    const tasks = getTasks(project.id);
+    const cols = getColumns();
+    const createdDate = new Date(project.createdAt).toLocaleDateString('he-IL', { day: 'numeric', month: 'long', year: 'numeric' });
+
+    const statsHtml = cols.map(col => {
+        const count = tasks.filter(t => t.state === col.id).length;
+        return `<div class="project-stat">
+            <span class="project-stat-dot" style="--col-hue: ${col.hue};"></span>
+            <span class="project-stat-label">${col.name}</span>
+            <span class="project-stat-count">${count}</span>
+        </div>`;
+    }).join('');
+
+    panel.innerHTML = `
+        <div class="project-details-header" style="--hue: ${hue};">
+            <div class="project-details-color-bar"></div>
+            <div class="project-details-name">${project.name}</div>
+        </div>
+        <div class="project-details-body">
+            <div class="project-details-section-label">משימות לפי שלב</div>
+            <div class="project-stats">${statsHtml}</div>
+            <div class="project-details-meta">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                    <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                <span>נוצר ${createdDate}</span>
+            </div>
+        </div>
+    `;
+}
+
+function toggleProjectDropdown() {
+    const dropdown = document.getElementById('projectDropdown');
+    const btn = document.getElementById('projectSelectorBtn');
+    if (!dropdown) return;
+    const isOpen = dropdown.classList.contains('open');
+    if (isOpen) {
+        closeProjectDropdown();
+    } else {
+        dropdown.classList.add('open');
+        btn.setAttribute('aria-expanded', 'true');
+        setTimeout(() => {
+            const input = document.getElementById('newProjectInput');
+            if (input) input.focus();
+        }, 50);
+    }
+}
+
+function closeProjectDropdown() {
+    const dropdown = document.getElementById('projectDropdown');
+    const btn = document.getElementById('projectSelectorBtn');
+    if (dropdown) dropdown.classList.remove('open');
+    if (btn) btn.setAttribute('aria-expanded', 'false');
 }
 
 // ===== Tasks =====
@@ -641,6 +735,9 @@ function updateUI() {
     const title = document.getElementById('pageTitle');
     const breadcrumb = document.getElementById('currentProjectName');
     const subtitle = document.getElementById('pageSubtitle');
+
+    renderProjectDetails();
+    updateSelectorButton();
 
     if (currentProjectId) {
         const project = getProjects().find(p => p.id === currentProjectId);
@@ -1214,6 +1311,20 @@ function clearAllData() {
 
 // ===== Event Listeners =====
 function setupEventListeners() {
+    // Project selector dropdown toggle
+    const selectorBtn = document.getElementById('projectSelectorBtn');
+    if (selectorBtn) selectorBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleProjectDropdown(); });
+
+    // Close project dropdown on outside click
+    document.addEventListener('click', (e) => {
+        const dropdown = document.getElementById('projectDropdown');
+        const sBtn = document.getElementById('projectSelectorBtn');
+        if (dropdown && dropdown.classList.contains('open') &&
+            !dropdown.contains(e.target) && e.target !== sBtn && !sBtn.contains(e.target)) {
+            closeProjectDropdown();
+        }
+    });
+
     // New project
     document.getElementById('newProjectInput').addEventListener('keydown', (e) => {
         if (e.key === 'Enter') addProject(e.target.value);
