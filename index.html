@@ -43,16 +43,39 @@
         <div class="body">
             <!-- Sidebar -->
             <aside class="sidebar">
-                <div class="sidebar-header">
-                    <span class="sidebar-title">פרויקטים</span>
-                    <span class="sidebar-count" id="projectCount">0</span>
+                <!-- Project Selector Dropdown -->
+                <div class="project-selector">
+                    <button class="project-selector-btn" id="projectSelectorBtn" type="button" aria-haspopup="listbox" aria-expanded="false">
+                        <span class="project-dot" id="selectorDot"></span>
+                        <span class="project-selector-name" id="selectorProjectName">בחר פרויקט</span>
+                        <svg class="selector-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                            <path d="M6 9l6 6 6-6"/>
+                        </svg>
+                    </button>
+                    <div class="project-dropdown" id="projectDropdown" role="listbox">
+                        <div class="projects-list" id="projectsList"></div>
+                        <div class="sidebar-add">
+                            <input class="sidebar-input" type="text" placeholder="פרויקט חדש…" id="newProjectInput" aria-label="שם פרויקט חדש">
+                            <button class="sidebar-add-btn" type="button" aria-label="הוסף פרויקט">+</button>
+                        </div>
+                    </div>
                 </div>
-                <div class="projects-list" id="projectsList"></div>
-                <div class="sidebar-add">
-                    <input class="sidebar-input" type="text" placeholder="שם הפרויקט…" id="newProjectInput" aria-label="שם פרויקט חדש">
-                    <button class="sidebar-add-btn" type="button" aria-label="הוסף פרויקט">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
-                        פרויקט חדש
+
+                <!-- Project Details Panel -->
+                <div class="project-details" id="projectDetails">
+                    <div class="project-details-empty">בחר פרויקט להצגת פרטים</div>
+                </div>
+
+                <div class="user-card">
+                    <div class="avatar" style="--hue: 200;">ד"ג</div>
+                    <div class="user-meta">
+                        <div class="user-name">דנה גולן</div>
+                        <div class="user-role">מנהל פרויקטים</div>
+                    </div>
+                    <button class="icon-btn-small" type="button" aria-label="עוד אפשרויות">
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
+                            <circle cx="2" cy="6" r="1.1"/><circle cx="6" cy="6" r="1.1"/><circle cx="10" cy="6" r="1.1"/>
+                        </svg>
                     </button>
                 </div>
             </aside>

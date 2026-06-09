@@ -8,6 +8,8 @@ const DB = {
     taskTypes: 'tb_task_types'
 };
 
+const DEFAULT_USER = { name: 'דנה גולן', role: 'מנהל פרויקטים', hue: 200 };
+
 let currentProjectId = null;
 let editingTaskId = null;
 let draggingTaskId = null;
@@ -150,6 +152,7 @@ function showPrompt(message, defaultValue = '', title) {
 document.addEventListener('DOMContentLoaded', () => {
     initNextTaskId();
     setupEventListeners();
+    renderUserUI();
     loadProjects();
     restoreCurrentProject();
 });
@@ -272,6 +275,130 @@ function renameColumn(id, newName) {
     col.name = escapeHtml(newName);
     saveColumns(columns);
     renderKanban();
+}
+
+function getUser() {
+    const d = localStorage.getItem(DB.user);
+    if (!d) return { ...DEFAULT_USER };
+    try {
+        const u = JSON.parse(d);
+        return {
+            name: u.name || DEFAULT_USER.name,
+            role: u.role || DEFAULT_USER.role,
+            hue: (u.hue !== undefined && u.hue !== null) ? u.hue : DEFAULT_USER.hue
+        };
+    } catch (e) {
+        return { ...DEFAULT_USER };
+    }
+}
+
+function saveUser(user) {
+    localStorage.setItem(DB.user, JSON.stringify(user));
+    createBackup();
+    renderUserUI();
+}
+
+function renderUserUI() {
+    const u = getUser();
+    const ini = initials(u.name) || u.name.substring(0, 2);
+
+    const topAvatar = document.querySelector('.topbar > .avatar');
+    if (topAvatar) {
+        topAvatar.style.setProperty('--hue', u.hue);
+        topAvatar.textContent = ini;
+        topAvatar.title = u.name;
+    }
+
+    const card = document.querySelector('.user-card');
+    if (card) {
+        const cardAvatar = card.querySelector('.avatar');
+        if (cardAvatar) {
+            cardAvatar.style.setProperty('--hue', u.hue);
+            cardAvatar.textContent = ini;
+        }
+        const nameEl = card.querySelector('.user-name');
+        if (nameEl) nameEl.textContent = u.name;
+        const roleEl = card.querySelector('.user-role');
+        if (roleEl) roleEl.textContent = u.role;
+    }
+}
+
+function openUserProfileModal() {
+    closePopovers();
+    const u = getUser();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.id = 'taskModal';
+    overlay.innerHTML = `
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h2 class="modal-title">פרטי המשתמש</h2>
+                <button class="modal-close" type="button" aria-label="סגור" onclick="closeModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="field">
+                    <label class="field-label">שם מלא *</label>
+                    <input type="text" id="userName" class="field-input" value="${escapeHtml(u.name)}" placeholder="שם פרטי ושם משפחה">
+                </div>
+                <div class="field">
+                    <label class="field-label">תפקיד</label>
+                    <input type="text" id="userRole" class="field-input" value="${escapeHtml(u.role)}" placeholder="מנהל פרויקטים, מפתח...">
+                </div>
+                <div class="field">
+                    <label class="field-label">צבע (גוון) — ${u.hue}°</label>
+                    <input type="range" id="userHue" class="field-input" min="0" max="360" step="1" value="${u.hue}">
+                    <div class="user-preview">
+                        <div class="avatar avatar-lg" id="userPreviewAvatar" style="--hue: ${u.hue};">${escapeHtml(initials(u.name) || 'אא')}</div>
+                        <div>
+                            <div class="user-name" id="userPreviewName">${escapeHtml(u.name)}</div>
+                            <div class="user-role" id="userPreviewRole">${escapeHtml(u.role)}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" type="button" onclick="closeModal()">ביטול</button>
+                <button class="btn-primary" type="button" onclick="saveUserFromModal()">שמור</button>
+            </div>
+        </div>
+    `;
+    overlay.onclick = () => closeModal();
+    document.body.appendChild(overlay);
+
+    const nameInput = overlay.querySelector('#userName');
+    const roleInput = overlay.querySelector('#userRole');
+    const hueInput = overlay.querySelector('#userHue');
+    const previewAvatar = overlay.querySelector('#userPreviewAvatar');
+    const previewName = overlay.querySelector('#userPreviewName');
+    const previewRole = overlay.querySelector('#userPreviewRole');
+    const hueLabel = overlay.querySelector('.field-label + input + .user-preview')?.previousElementSibling?.previousElementSibling;
+
+    const refreshPreview = () => {
+        previewAvatar.textContent = initials(nameInput.value) || (nameInput.value || 'אא').substring(0, 2);
+        previewAvatar.style.setProperty('--hue', hueInput.value);
+        previewName.textContent = nameInput.value || '—';
+        previewRole.textContent = roleInput.value || '';
+    };
+    nameInput.addEventListener('input', refreshPreview);
+    roleInput.addEventListener('input', refreshPreview);
+    hueInput.addEventListener('input', () => {
+        refreshPreview();
+        const lbl = overlay.querySelector('label[for="userHue"]') ||
+            overlay.querySelectorAll('.field-label')[2];
+        if (lbl) lbl.textContent = `צבע (גוון) — ${hueInput.value}°`;
+    });
+
+    setTimeout(() => nameInput.focus(), 50);
+}
+
+function saveUserFromModal() {
+    const name = document.getElementById('userName').value.trim();
+    if (!name) { alert('שם חובה'); return; }
+    const role = document.getElementById('userRole').value.trim();
+    const hue = parseInt(document.getElementById('userHue').value, 10) || 0;
+    saveUser({ name, role, hue });
+    closeModal();
 }
 
 function getCurrentProjectId() {
@@ -447,35 +574,128 @@ function restoreCurrentProject() {
 function loadProjects() {
     const list = document.getElementById('projectsList');
     const projects = getProjects();
-    document.getElementById('projectCount').textContent = projects.length;
 
     list.innerHTML = '';
 
     if (projects.length === 0) {
-        list.innerHTML = '<div style="padding: 16px 12px; text-align: center; color: var(--ink-f); font-size: 12px;">אין פרויקטים עדיין</div>';
+        list.innerHTML = '<div style="padding: 12px; text-align: center; color: var(--ink-f); font-size: 12px;">אין פרויקטים עדיין</div>';
+    } else {
+        const cols = getColumns();
+        const lastColId = cols.length ? cols[cols.length - 1].id : null;
+        projects.forEach((p) => {
+            const taskCount = getTasks(p.id).filter(t => t.state !== lastColId).length;
+            const isActive = p.id === currentProjectId;
+            const hue = HUES[p.hueIdx || 0];
+
+            const el = document.createElement('div');
+            el.className = `project-item ${isActive ? 'active' : ''}`;
+            el.style.setProperty('--hue', hue);
+            el.setAttribute('role', 'option');
+            el.setAttribute('aria-selected', isActive ? 'true' : 'false');
+            el.onclick = () => { selectProject(p.id); closeProjectDropdown(); };
+            el.innerHTML = `
+                <span class="project-dot"></span>
+                <span class="project-name">${p.name}</span>
+                <span class="project-count">${taskCount}</span>
+                <button class="project-delete-btn" onclick="deleteProject(${p.id}, event)" title="מחק">×</button>
+            `;
+            list.appendChild(el);
+        });
+    }
+
+    updateSelectorButton();
+    renderProjectDetails();
+}
+
+function updateSelectorButton() {
+    const btn = document.getElementById('projectSelectorBtn');
+    const dot = document.getElementById('selectorDot');
+    const nameEl = document.getElementById('selectorProjectName');
+    if (!btn || !dot || !nameEl) return;
+
+    if (currentProjectId) {
+        const project = getProjects().find(p => p.id === currentProjectId);
+        if (project) {
+            const hue = HUES[project.hueIdx || 0];
+            dot.style.setProperty('--hue', hue);
+            dot.style.background = `oklch(0.72 0.12 ${hue})`;
+            nameEl.textContent = project.name;
+            return;
+        }
+    }
+    dot.style.background = 'var(--line-h)';
+    nameEl.textContent = 'בחר פרויקט';
+}
+
+function renderProjectDetails() {
+    const panel = document.getElementById('projectDetails');
+    if (!panel) return;
+
+    if (!currentProjectId) {
+        panel.innerHTML = '<div class="project-details-empty">בחר פרויקט להצגת פרטים</div>';
         return;
     }
 
-    const cols = getColumns();
-    const lastColId = cols.length ? cols[cols.length - 1].id : null;
-    projects.forEach((p) => {
-        const taskCount = getTasks(p.id).filter(t => t.state !== lastColId).length;
-        const isActive = p.id === currentProjectId;
-        const hue = HUES[p.hueIdx || 0];
+    const project = getProjects().find(p => p.id === currentProjectId);
+    if (!project) {
+        panel.innerHTML = '<div class="project-details-empty">בחר פרויקט להצגת פרטים</div>';
+        return;
+    }
 
-        const el = document.createElement('div');
-        el.className = `project-item ${isActive ? 'active' : ''}`;
-        el.style.setProperty('--hue', hue);
-        el.onclick = () => selectProject(p.id);
-        el.innerHTML = `
-            <span class="project-dot"></span>
-            <span class="project-name">${p.name}</span>
-            <span class="project-count">${taskCount}</span>
-            <button class="project-settings-btn" onclick="openProjectSettings(${p.id}, event)" title="הגדרות">⚙</button>
-            <button class="project-delete-btn" onclick="deleteProject(${p.id}, event)" title="מחק">×</button>
-        `;
-        list.appendChild(el);
-    });
+    const hue = HUES[project.hueIdx || 0];
+    const tasks = getTasks(project.id);
+    const cols = getColumns();
+    const createdDate = new Date(project.createdAt).toLocaleDateString('he-IL', { day: 'numeric', month: 'long', year: 'numeric' });
+
+    const statsHtml = cols.map(col => {
+        const count = tasks.filter(t => t.state === col.id).length;
+        return `<div class="project-stat">
+            <span class="project-stat-dot" style="--col-hue: ${col.hue};"></span>
+            <span class="project-stat-label">${col.name}</span>
+            <span class="project-stat-count">${count}</span>
+        </div>`;
+    }).join('');
+
+    panel.innerHTML = `
+        <div class="project-details-header" style="--hue: ${hue};">
+            <div class="project-details-color-bar"></div>
+            <div class="project-details-name">${project.name}</div>
+        </div>
+        <div class="project-details-body">
+            <div class="project-details-section-label">משימות לפי שלב</div>
+            <div class="project-stats">${statsHtml}</div>
+            <div class="project-details-meta">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                    <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                <span>נוצר ${createdDate}</span>
+            </div>
+        </div>
+    `;
+}
+
+function toggleProjectDropdown() {
+    const dropdown = document.getElementById('projectDropdown');
+    const btn = document.getElementById('projectSelectorBtn');
+    if (!dropdown) return;
+    const isOpen = dropdown.classList.contains('open');
+    if (isOpen) {
+        closeProjectDropdown();
+    } else {
+        dropdown.classList.add('open');
+        btn.setAttribute('aria-expanded', 'true');
+        setTimeout(() => {
+            const input = document.getElementById('newProjectInput');
+            if (input) input.focus();
+        }, 50);
+    }
+}
+
+function closeProjectDropdown() {
+    const dropdown = document.getElementById('projectDropdown');
+    const btn = document.getElementById('projectSelectorBtn');
+    if (dropdown) dropdown.classList.remove('open');
+    if (btn) btn.setAttribute('aria-expanded', 'false');
 }
 
 // ===== Tasks =====
@@ -741,6 +961,9 @@ function updateUI() {
     const title = document.getElementById('pageTitle');
     const breadcrumb = document.getElementById('currentProjectName');
     const subtitle = document.getElementById('pageSubtitle');
+
+    renderProjectDetails();
+    updateSelectorButton();
 
     if (currentProjectId) {
         const project = getProjects().find(p => p.id === currentProjectId);
@@ -1580,18 +1803,22 @@ function openUserMenu(anchor) {
     const cols = getColumns();
     const lastColId = cols.length ? cols[cols.length - 1].id : null;
     const done = getAllTasks().filter(t => t.state === lastColId).length;
+    const u = getUser();
 
     const pop = document.createElement('div');
     pop.className = 'popover';
     pop.id = 'activePopover';
     pop.innerHTML = `
-        <div class="popover-title">הפרופיל שלי</div>
+        <div class="popover-title">${escapeHtml(u.name)}</div>
         <div class="popover-stats">
             <div class="stat"><div class="stat-num">${projects}</div><div class="stat-label">פרויקטים</div></div>
             <div class="stat"><div class="stat-num">${tasks}</div><div class="stat-label">משימות</div></div>
             <div class="stat"><div class="stat-num">${done}</div><div class="stat-label">הושלמו</div></div>
         </div>
         <div class="popover-menu">
+            <button class="popover-menu-item" type="button" onclick="openUserProfileModal()">👤 ערוך פרופיל</button>
+            <button class="popover-menu-item" type="button" onclick="exportData()">📥 ייצא נתונים</button>
+            <button class="popover-menu-item" type="button" onclick="showBackupInfo()">💾 פרטי גיבוי</button>
             <button class="popover-menu-item" type="button" onclick="exportData()">${ICONS.export} ייצא נתונים</button>
             <button class="popover-menu-item" type="button" onclick="showBackupInfo()">${ICONS.save} פרטי גיבוי</button>
         </div>
@@ -1796,6 +2023,20 @@ async function clearAllData() {
 
 // ===== Event Listeners =====
 function setupEventListeners() {
+    // Project selector dropdown toggle
+    const selectorBtn = document.getElementById('projectSelectorBtn');
+    if (selectorBtn) selectorBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleProjectDropdown(); });
+
+    // Close project dropdown on outside click
+    document.addEventListener('click', (e) => {
+        const dropdown = document.getElementById('projectDropdown');
+        const sBtn = document.getElementById('projectSelectorBtn');
+        if (dropdown && dropdown.classList.contains('open') &&
+            !dropdown.contains(e.target) && e.target !== sBtn && !sBtn.contains(e.target)) {
+            closeProjectDropdown();
+        }
+    });
+
     // New project
     document.getElementById('newProjectInput').addEventListener('keydown', (e) => {
         if (e.key === 'Enter') addProject(e.target.value);
@@ -1904,6 +2145,8 @@ window.closeProjectSettings = closeProjectSettings;
 window.saveProjectSettings = saveProjectSettings;
 window.saveTaskFromModal = saveTaskFromModal;
 window.closeModal = closeModal;
+window.openUserProfileModal = openUserProfileModal;
+window.saveUserFromModal = saveUserFromModal;
 window.setFilter = setFilter;
 window.setSort = setSort;
 window.clearFilters = clearFilters;
