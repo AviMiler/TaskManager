@@ -732,6 +732,10 @@ input {
     border-color: var(--state-dot);
 }
 
+.kanban-column.dragging-column {
+    opacity: 0.4;
+}
+
 .kanban-column {
     --col-hue: 220;
     --state-c:   hsl(var(--col-hue), 55%, 35%);
@@ -747,6 +751,11 @@ input {
     display: flex;
     align-items: center;
     gap: 9px;
+    cursor: grab;
+}
+
+.column-header:active {
+    cursor: grabbing;
 }
 
 .column-dot {

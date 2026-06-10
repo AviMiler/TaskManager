@@ -13,6 +13,7 @@ const DEFAULT_USER = { name: 'דנה גולן', role: 'מנהל פרויקטים
 let currentProjectId = null;
 let editingTaskId = null;
 let draggingTaskId = null;
+let draggingColumnId = null;
 let nextTaskId = 1000;
 let currentView = 'kanban'; // 'kanban' | 'list'
 let listScope = 'current'; // 'current' | 'all'
@@ -817,6 +818,21 @@ function renderKanban() {
             const next = await showPrompt('שם חדש לעמודה:', current);
             if (next !== null && next.trim()) renameColumn(col.id, next);
         });
+
+        // Drag column to reorder via header
+        const headerEl = colEl.querySelector('.column-header');
+        headerEl.draggable = true;
+        headerEl.addEventListener('dragstart', (e) => {
+            draggingColumnId = col.id;
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', col.id);
+            colEl.classList.add('dragging-column');
+        });
+        headerEl.addEventListener('dragend', () => {
+            draggingColumnId = null;
+            colEl.classList.remove('dragging-column');
+            document.querySelectorAll('.kanban-column').forEach(c => c.classList.remove('drop-over'));
+        });
     });
 
     // Add-column button at the end of the board
@@ -945,12 +961,29 @@ function setupColumnDragDrop() {
         col.addEventListener('drop', (e) => {
             e.preventDefault();
             col.classList.remove('drop-over');
+            if (draggingColumnId !== null) {
+                reorderColumn(draggingColumnId, col.dataset.state);
+                draggingColumnId = null;
+                return;
+            }
             if (draggingTaskId !== null) {
                 const newState = col.dataset.state;
                 moveTask(draggingTaskId, newState);
             }
         });
     });
+}
+
+function reorderColumn(draggedId, targetId) {
+    if (draggedId === targetId) return;
+    const columns = getColumns();
+    const fromIdx = columns.findIndex(c => c.id === draggedId);
+    const toIdx = columns.findIndex(c => c.id === targetId);
+    if (fromIdx === -1 || toIdx === -1) return;
+    const [moved] = columns.splice(fromIdx, 1);
+    columns.splice(toIdx, 0, moved);
+    saveColumns(columns);
+    renderKanban();
 }
 
 // ===== UI Update =====
