@@ -754,6 +754,7 @@ function openLinkModal(projectId, linkId) {
     const links = Array.isArray(project.links) ? project.links : [];
     const link = linkId ? links.find(l => l.id === linkId) : null;
     const isNew = !link;
+    const linkType = link && link.url && link.url.startsWith('/') ? 'file' : 'http';
 
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
@@ -770,8 +771,24 @@ function openLinkModal(projectId, linkId) {
                     <input type="text" id="linkName" class="field-input" value="${link ? unescapeForInput(link.name) : ''}" placeholder="לדוגמה: מסמך עיצוב">
                 </div>
                 <div class="field">
-                    <label class="field-label">קישור (URL) *</label>
-                    <input type="text" id="linkUrl" class="field-input" value="${link ? link.url : ''}" placeholder="https://...">
+                    <label class="field-label">סוג קישור</label>
+                    <div class="link-type-selector">
+                        <button type="button" class="link-type-btn${linkType === 'http' ? ' active' : ''}" data-type="http" id="linkTypeHttp">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                            HTTP
+                        </button>
+                        <button type="button" class="link-type-btn${linkType === 'file' ? ' active' : ''}" data-type="file" id="linkTypeFile">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
+                            File
+                        </button>
+                    </div>
+                </div>
+                <div class="field">
+                    <label class="field-label">קישור *</label>
+                    <div id="linkInputContainer">
+                        <input type="text" id="linkUrl" class="field-input" value="${link ? link.url : ''}" placeholder="https://..." style="display: ${linkType === 'http' ? 'block' : 'none'}">
+                        <input type="file" id="linkFile" class="field-input" style="display: ${linkType === 'file' ? 'block' : 'none'}" accept="*">
+                    </div>
                 </div>
                 <div class="field">
                     <label class="field-label">אייקון</label>
@@ -788,6 +805,26 @@ function openLinkModal(projectId, linkId) {
     `;
     overlay.onclick = () => closeLinkModal();
     document.body.appendChild(overlay);
+
+    // Link type selector
+    const typeButtons = overlay.querySelectorAll('.link-type-btn');
+    typeButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const type = btn.dataset.type;
+            typeButtons.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            const urlInput = overlay.querySelector('#linkUrl');
+            const fileInput = overlay.querySelector('#linkFile');
+            if (type === 'http') {
+                urlInput.style.display = 'block';
+                fileInput.style.display = 'none';
+            } else {
+                urlInput.style.display = 'none';
+                fileInput.style.display = 'block';
+            }
+        });
+    });
 
     overlay.querySelectorAll('.link-icon-opt').forEach(b => {
         b.addEventListener('click', () => {
@@ -808,14 +845,27 @@ function closeLinkModal() {
 
 async function saveLinkFromModal(projectId, linkId) {
     const name = document.getElementById('linkName').value.trim();
-    let url = document.getElementById('linkUrl').value.trim();
+    const urlInput = document.getElementById('linkUrl');
+    const fileInput = document.getElementById('linkFile');
     const selected = document.querySelector('#linkIconPicker .link-icon-opt.selected');
     const icon = selected ? selected.dataset.icon : 'link';
 
     if (!name) { await showAlert('שם חובה'); return; }
-    if (!url) { await showAlert('קישור חובה'); return; }
-    if (!/^[a-zA-Z]+:\/\//.test(url) && !url.startsWith('/') && !url.startsWith('mailto:')) {
-        url = 'https://' + url;
+
+    let url = '';
+    const activeTypeBtn = document.querySelector('.link-type-btn.active');
+    const linkType = activeTypeBtn ? activeTypeBtn.dataset.type : 'http';
+
+    if (linkType === 'http') {
+        url = urlInput.value.trim();
+        if (!url) { await showAlert('קישור חובה'); return; }
+        if (!/^[a-zA-Z]+:\/\//.test(url) && !url.startsWith('/') && !url.startsWith('mailto:')) {
+            url = 'https://' + url;
+        }
+    } else if (linkType === 'file') {
+        const file = fileInput.files[0];
+        if (!file) { await showAlert('בחר קובץ'); return; }
+        url = '/' + file.name;
     }
 
     const projects = getProjects();
