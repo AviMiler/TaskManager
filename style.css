@@ -577,11 +577,13 @@ input {
 }
 
 .project-link-icon {
-    font-size: 18px;
     line-height: 1;
     flex-shrink: 0;
     width: 24px;
-    text-align: center;
+    height: 24px;
+    display: grid;
+    place-items: center;
+    color: var(--ink-s);
 }
 
 .project-link-name {
@@ -668,11 +670,11 @@ input {
     border: 1px solid var(--line);
     background: var(--surface);
     border-radius: var(--r-md);
-    font-size: 18px;
+    color: var(--ink-s);
     display: grid;
     place-items: center;
     cursor: pointer;
-    transition: background 0.12s, border-color 0.12s, transform 0.1s;
+    transition: background 0.12s, border-color 0.12s, color 0.12s;
 }
 
 .link-icon-opt:hover {
@@ -683,6 +685,7 @@ input {
 .link-icon-opt.selected {
     background: var(--blue-bg);
     border-color: var(--blue);
+    color: var(--blue-d);
 }
 
 .user-card {

@@ -660,7 +660,7 @@ function renderProjectDetails() {
     const links = Array.isArray(project.links) ? project.links : [];
     const linksHtml = links.map(l => `
         <div class="project-link-btn" data-link-id="${l.id}" title="${l.url}">
-            <span class="project-link-icon">${l.icon || '🔗'}</span>
+            <span class="project-link-icon">${renderLinkIcon(l.icon)}</span>
             <span class="project-link-name">${l.name}</span>
             <button class="project-link-edit" type="button" data-edit-link="${l.id}" aria-label="ערוך">✎</button>
             <button class="project-link-del" type="button" data-del-link="${l.id}" aria-label="מחק">×</button>
@@ -680,7 +680,7 @@ function renderProjectDetails() {
             <div class="project-links">
                 ${linksHtml}
                 <button class="project-link-add" type="button" id="addLinkBtn">
-                    <span class="project-link-icon">+</span>
+                    <span class="project-link-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14"/><path d="M5 12h14"/></svg></span>
                     <span class="project-link-name">הוסף קישור</span>
                 </button>
             </div>
@@ -719,7 +719,34 @@ function renderProjectDetails() {
     });
 }
 
-const LINK_ICONS = ['🔗', '📁', '📄', '📊', '💻', '🌐', '📋', '🎨', '📦', '⚙️', '📌', '📅', '✉️', '💬', '🎯'];
+// Simple single-color (currentColor) SVG icons for project link buttons
+const LINK_ICON_DEFS = {
+    spec:   '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 2h6l5 5v13a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Z"/><path d="M9 11h6"/><path d="M9 15h6"/><path d="M9 7h2"/></svg>',
+    code:   '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m8 16-4-4 4-4"/><path d="m16 8 4 4-4 4"/><path d="m13 5-2 14"/></svg>',
+    deploy: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09Z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 19 2c0 2.5-.5 6.5-4 9a22.35 22.35 0 0 1-3 2Z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>',
+    excel:  '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>',
+    link:   '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>',
+    folder: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h5l2 2h9a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z"/></svg>',
+    design: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>',
+    doc:    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>'
+};
+
+const LINK_ICONS = Object.keys(LINK_ICON_DEFS);
+
+function renderLinkIcon(iconId) {
+    return LINK_ICON_DEFS[iconId] || LINK_ICON_DEFS.link;
+}
+
+const LINK_ICON_LABELS = {
+    spec: 'איפיון',
+    code: 'קוד',
+    deploy: 'תוכנית עליה',
+    excel: 'XL',
+    link: 'קישור',
+    folder: 'תיקייה',
+    design: 'עיצוב',
+    doc: 'מסמך'
+};
 
 function openLinkModal(projectId, linkId) {
     const project = getProjects().find(p => p.id === projectId);
@@ -749,9 +776,8 @@ function openLinkModal(projectId, linkId) {
                 <div class="field">
                     <label class="field-label">אייקון</label>
                     <div class="link-icon-picker" id="linkIconPicker">
-                        ${LINK_ICONS.map(ic => `<button type="button" class="link-icon-opt${(link && link.icon === ic) || (!link && ic === '🔗') ? ' selected' : ''}" data-icon="${ic}">${ic}</button>`).join('')}
+                        ${LINK_ICONS.map(ic => `<button type="button" class="link-icon-opt${(link && link.icon === ic) || (!link && ic === 'link') ? ' selected' : ''}" data-icon="${ic}" title="${LINK_ICON_LABELS[ic]}">${LINK_ICON_DEFS[ic]}</button>`).join('')}
                     </div>
-                    <input type="text" id="linkIconCustom" class="field-input" style="margin-top:8px;" value="${link && !LINK_ICONS.includes(link.icon) ? link.icon : ''}" placeholder="או הקלד אייקון מותאם (אימוג'י / אות)">
                 </div>
             </div>
             <div class="modal-footer">
@@ -783,9 +809,8 @@ function closeLinkModal() {
 async function saveLinkFromModal(projectId, linkId) {
     const name = document.getElementById('linkName').value.trim();
     let url = document.getElementById('linkUrl').value.trim();
-    const custom = document.getElementById('linkIconCustom').value.trim();
     const selected = document.querySelector('#linkIconPicker .link-icon-opt.selected');
-    const icon = custom || (selected ? selected.dataset.icon : '🔗');
+    const icon = selected ? selected.dataset.icon : 'link';
 
     if (!name) { await showAlert('שם חובה'); return; }
     if (!url) { await showAlert('קישור חובה'); return; }
