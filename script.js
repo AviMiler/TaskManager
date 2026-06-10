@@ -251,7 +251,7 @@ async function deleteColumn(id) {
     const columns = getColumns();
     const col = columns.find(c => c.id === id);
     if (!col) return;
-    const tasksInColumn = getAllTasks().filter(t => t.state === id).length;
+    const tasksInColumn = getTasks(currentProjectId).filter(t => t.state === id).length;
     if (tasksInColumn > 0) {
         await showAlert(`לא ניתן למחוק את העמודה "${unescapeForInput(col.name)}" - יש בה ${tasksInColumn} משימות.\nהעבר אותן לעמודה אחרת לפני המחיקה.`);
         return;
