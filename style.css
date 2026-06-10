@@ -549,6 +549,142 @@ input {
     font-size: 11px;
 }
 
+/* Project Links */
+.project-links {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.project-link-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+    position: relative;
+    min-height: 44px;
+}
+
+.project-link-btn:hover {
+    background: #f7f9fc;
+    border-color: var(--line-h);
+    box-shadow: var(--shadow-card-hover);
+}
+
+.project-link-icon {
+    font-size: 18px;
+    line-height: 1;
+    flex-shrink: 0;
+    width: 24px;
+    text-align: center;
+}
+
+.project-link-name {
+    flex: 1;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.project-link-edit,
+.project-link-del {
+    width: 22px;
+    height: 22px;
+    border-radius: 4px;
+    color: var(--ink-f);
+    background: transparent;
+    border: none;
+    opacity: 0;
+    transition: opacity 0.15s, background 0.15s, color 0.15s;
+    display: grid;
+    place-items: center;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.project-link-btn:hover .project-link-edit,
+.project-link-btn:hover .project-link-del {
+    opacity: 1;
+}
+
+.project-link-edit:hover {
+    background: var(--blue-bg);
+    color: var(--blue-d);
+}
+
+.project-link-del:hover {
+    background: #fef0ef;
+    color: #b42318;
+}
+
+.project-link-add {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: transparent;
+    border: 1px dashed var(--line-h);
+    border-radius: var(--r-md);
+    color: var(--ink-s);
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+    min-height: 44px;
+}
+
+.project-link-add:hover {
+    background: var(--blue-bg);
+    border-color: var(--blue);
+    color: var(--blue-d);
+}
+
+.project-link-add .project-link-icon {
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.project-link-add .project-link-name {
+    font-size: 12.5px;
+    font-weight: 500;
+    color: inherit;
+}
+
+/* Link icon picker (modal) */
+.link-icon-picker {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 6px;
+}
+
+.link-icon-opt {
+    aspect-ratio: 1;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    border-radius: var(--r-md);
+    font-size: 18px;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s, transform 0.1s;
+}
+
+.link-icon-opt:hover {
+    background: var(--bg);
+    border-color: var(--line-h);
+}
+
+.link-icon-opt.selected {
+    background: var(--blue-bg);
+    border-color: var(--blue);
+}
+
 .user-card {
     margin-top: auto;
     padding: 12px 14px;

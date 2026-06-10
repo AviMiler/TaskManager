@@ -657,6 +657,16 @@ function renderProjectDetails() {
         </div>`;
     }).join('');
 
+    const links = Array.isArray(project.links) ? project.links : [];
+    const linksHtml = links.map(l => `
+        <div class="project-link-btn" data-link-id="${l.id}" title="${l.url}">
+            <span class="project-link-icon">${l.icon || '🔗'}</span>
+            <span class="project-link-name">${l.name}</span>
+            <button class="project-link-edit" type="button" data-edit-link="${l.id}" aria-label="ערוך">✎</button>
+            <button class="project-link-del" type="button" data-del-link="${l.id}" aria-label="מחק">×</button>
+        </div>
+    `).join('');
+
     panel.innerHTML = `
         <div class="project-details-header" style="--hue: ${hue};">
             <div class="project-details-color-bar"></div>
@@ -665,6 +675,16 @@ function renderProjectDetails() {
         <div class="project-details-body">
             <div class="project-details-section-label">משימות לפי שלב</div>
             <div class="project-stats">${statsHtml}</div>
+
+            <div class="project-details-section-label">קישורים</div>
+            <div class="project-links">
+                ${linksHtml}
+                <button class="project-link-add" type="button" id="addLinkBtn">
+                    <span class="project-link-icon">+</span>
+                    <span class="project-link-name">הוסף קישור</span>
+                </button>
+            </div>
+
             <div class="project-details-meta">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
                     <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
@@ -673,6 +693,130 @@ function renderProjectDetails() {
             </div>
         </div>
     `;
+
+    const addBtn = panel.querySelector('#addLinkBtn');
+    if (addBtn) addBtn.addEventListener('click', () => openLinkModal(project.id, null));
+
+    panel.querySelectorAll('.project-link-btn').forEach(el => {
+        el.addEventListener('click', (e) => {
+            if (e.target.closest('[data-edit-link]') || e.target.closest('[data-del-link]')) return;
+            const id = el.dataset.linkId;
+            const link = links.find(l => l.id === id);
+            if (link && link.url) window.open(link.url, '_blank', 'noopener');
+        });
+    });
+    panel.querySelectorAll('[data-edit-link]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openLinkModal(project.id, btn.dataset.editLink);
+        });
+    });
+    panel.querySelectorAll('[data-del-link]').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            if (await showConfirm('למחוק את הקישור?')) deleteLink(project.id, btn.dataset.delLink);
+        });
+    });
+}
+
+const LINK_ICONS = ['🔗', '📁', '📄', '📊', '💻', '🌐', '📋', '🎨', '📦', '⚙️', '📌', '📅', '✉️', '💬', '🎯'];
+
+function openLinkModal(projectId, linkId) {
+    const project = getProjects().find(p => p.id === projectId);
+    if (!project) return;
+    const links = Array.isArray(project.links) ? project.links : [];
+    const link = linkId ? links.find(l => l.id === linkId) : null;
+    const isNew = !link;
+
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.id = 'linkModal';
+    overlay.innerHTML = `
+        <div class="modal" onclick="event.stopPropagation()" style="max-width: 440px;">
+            <div class="modal-header">
+                <h2 class="modal-title">${isNew ? 'קישור חדש' : 'עריכת קישור'}</h2>
+                <button class="modal-close" type="button" aria-label="סגור" onclick="closeLinkModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="field">
+                    <label class="field-label">שם *</label>
+                    <input type="text" id="linkName" class="field-input" value="${link ? unescapeForInput(link.name) : ''}" placeholder="לדוגמה: מסמך עיצוב">
+                </div>
+                <div class="field">
+                    <label class="field-label">קישור (URL) *</label>
+                    <input type="text" id="linkUrl" class="field-input" value="${link ? link.url : ''}" placeholder="https://...">
+                </div>
+                <div class="field">
+                    <label class="field-label">אייקון</label>
+                    <div class="link-icon-picker" id="linkIconPicker">
+                        ${LINK_ICONS.map(ic => `<button type="button" class="link-icon-opt${(link && link.icon === ic) || (!link && ic === '🔗') ? ' selected' : ''}" data-icon="${ic}">${ic}</button>`).join('')}
+                    </div>
+                    <input type="text" id="linkIconCustom" class="field-input" style="margin-top:8px;" value="${link && !LINK_ICONS.includes(link.icon) ? link.icon : ''}" placeholder="או הקלד אייקון מותאם (אימוג'י / אות)">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" type="button" onclick="closeLinkModal()">ביטול</button>
+                <button class="btn-primary" type="button" id="saveLinkBtn">שמור</button>
+            </div>
+        </div>
+    `;
+    overlay.onclick = () => closeLinkModal();
+    document.body.appendChild(overlay);
+
+    overlay.querySelectorAll('.link-icon-opt').forEach(b => {
+        b.addEventListener('click', () => {
+            overlay.querySelectorAll('.link-icon-opt').forEach(x => x.classList.remove('selected'));
+            b.classList.add('selected');
+            overlay.querySelector('#linkIconCustom').value = '';
+        });
+    });
+
+    overlay.querySelector('#saveLinkBtn').addEventListener('click', () => saveLinkFromModal(projectId, linkId));
+    setTimeout(() => overlay.querySelector('#linkName').focus(), 50);
+}
+
+function closeLinkModal() {
+    const m = document.getElementById('linkModal');
+    if (m) m.remove();
+}
+
+async function saveLinkFromModal(projectId, linkId) {
+    const name = document.getElementById('linkName').value.trim();
+    let url = document.getElementById('linkUrl').value.trim();
+    const custom = document.getElementById('linkIconCustom').value.trim();
+    const selected = document.querySelector('#linkIconPicker .link-icon-opt.selected');
+    const icon = custom || (selected ? selected.dataset.icon : '🔗');
+
+    if (!name) { await showAlert('שם חובה'); return; }
+    if (!url) { await showAlert('קישור חובה'); return; }
+    if (!/^[a-zA-Z]+:\/\//.test(url) && !url.startsWith('/') && !url.startsWith('mailto:')) {
+        url = 'https://' + url;
+    }
+
+    const projects = getProjects();
+    const project = projects.find(p => p.id === projectId);
+    if (!project) return;
+    if (!Array.isArray(project.links)) project.links = [];
+
+    if (linkId) {
+        const l = project.links.find(x => x.id === linkId);
+        if (l) { l.name = escapeHtml(name); l.url = url; l.icon = icon; }
+    } else {
+        project.links.push({ id: 'link_' + Date.now(), name: escapeHtml(name), url, icon });
+    }
+
+    saveProjects(projects);
+    closeLinkModal();
+    renderProjectDetails();
+}
+
+function deleteLink(projectId, linkId) {
+    const projects = getProjects();
+    const project = projects.find(p => p.id === projectId);
+    if (!project || !Array.isArray(project.links)) return;
+    project.links = project.links.filter(l => l.id !== linkId);
+    saveProjects(projects);
+    renderProjectDetails();
 }
 
 function toggleProjectDropdown() {
@@ -2173,6 +2317,7 @@ function escapeAttr(text) {
 window.deleteProject = deleteProject;
 window.deleteTask = deleteTask;
 window.openEditModal = openEditModal;
+window.closeLinkModal = closeLinkModal;
 window.openProjectSettings = openProjectSettings;
 window.closeProjectSettings = closeProjectSettings;
 window.saveProjectSettings = saveProjectSettings;
