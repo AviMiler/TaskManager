@@ -38,6 +38,18 @@ python3 -m http.server 8000
 
 > השרת ממשיך לרוץ ברקע גם אחרי שסוגרים את הדפדפן. כדי לעצור אותו, צריך לסגור את התהליך מ-Task Manager (Windows) / Activity Monitor (Mac), בחיפוש אחר `python`.
 
+### דרך 3: הפעלה אוטומטית עם הפעלת המחשב (מומלץ לכל מחשב בצוות)
+מריצים **פעם אחת**, והשרת יעלה אוטומטית ברקע מאז ואילך, גם בלי לפתוח כלום:
+
+**Windows**: לחץ פעמיים על `install-autostart-windows.bat` (יוצר קיצור ל-`start-server-hidden.vbs` בתיקיית ה-Startup)
+**Mac**: הריצו `./install-autostart-mac.sh` (רושם LaunchAgent שמריץ את השרת בכל login)
+
+לאחר ההתקנה החד-פעמית, פשוט פותחים `http://localhost:8000` בדפדפן בכל פעם.
+
+להסרה:
+- **Windows**: למחוק את `TaskBoard Server.lnk` מתיקיית `shell:startup`
+- **Mac**: `launchctl unload ~/Library/LaunchAgents/com.taskboard.server.plist && rm ~/Library/LaunchAgents/com.taskboard.server.plist`
+
 ## 👥 עבודת צוות - קובץ משותף
 
 כדי שכמה אנשים יעבדו על אותו לוח משימות:
