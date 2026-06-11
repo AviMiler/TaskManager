@@ -702,7 +702,19 @@ function renderProjectDetails() {
             if (e.target.closest('[data-edit-link]') || e.target.closest('[data-del-link]')) return;
             const id = el.dataset.linkId;
             const link = links.find(l => l.id === id);
-            if (link && link.url) window.open(link.url, '_blank', 'noopener');
+            if (link && link.url) {
+                if (link.url.startsWith('file:')) {
+                    const blobFile = window._fileBlobs && window._fileBlobs[link.url];
+                    if (blobFile) {
+                        const blobUrl = URL.createObjectURL(blobFile);
+                        window.open(blobUrl, '_blank', 'noopener');
+                    } else {
+                        window.open(link.url, '_blank', 'noopener');
+                    }
+                } else {
+                    window.open(link.url, '_blank', 'noopener');
+                }
+            }
         });
     });
     panel.querySelectorAll('[data-edit-link]').forEach(btn => {
@@ -789,7 +801,10 @@ function openLinkModal(projectId, linkId) {
                     <div id="linkInputContainer">
                         <input type="text" id="linkUrl" class="field-input" value="${link && linkType === 'http' ? link.url : ''}" placeholder="https://..." style="display: ${linkType === 'http' ? 'block' : 'none'}">
                         <div style="display: ${linkType === 'file' ? 'block' : 'none'}">
-                            <input type="file" id="linkFile" class="field-input" accept="*" style="margin-bottom: 8px;">
+                            <button type="button" id="filePickerBtn" class="file-picker-btn" style="display: block;">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
+                                בחר קובץ
+                            </button>
                             <div id="fileDisplayName" class="file-selected-display" style="${fileDisplayName ? '' : 'display: none;'}">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
                                 <span>${fileDisplayName}</span>
@@ -834,18 +849,38 @@ function openLinkModal(projectId, linkId) {
         });
     });
 
-    // File input change handler
-    const fileInput = overlay.querySelector('#linkFile');
+    // File picker button
+    const filePickerBtn = overlay.querySelector('#filePickerBtn');
     const displayDiv = overlay.querySelector('#fileDisplayName');
+    let selectedFileUrl = linkType === 'file' && fileDisplayName ? fileDisplayName : '';
 
-    if (fileInput) {
-        fileInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                displayDiv.querySelector('span').textContent = file.name;
-                displayDiv.style.display = 'flex';
-            } else {
-                displayDiv.style.display = 'none';
+    if (filePickerBtn) {
+        filePickerBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            try {
+                if ('showOpenFilePicker' in window) {
+                    const [fileHandle] = await window.showOpenFilePicker();
+                    const file = await fileHandle.getFile();
+
+                    const blobUrl = URL.createObjectURL(file);
+                    const fullPath = file.webkitRelativePath || file.name;
+                    const fileUri = 'file:///' + fullPath.replace(/\\/g, '/');
+
+                    selectedFileUrl = fileUri;
+                    const displayText = `${fileUri}`;
+                    displayDiv.querySelector('span').textContent = displayText;
+                    displayDiv.style.display = 'flex';
+                    filePickerBtn.style.display = 'none';
+
+                    window._fileBlobs = window._fileBlobs || {};
+                    window._fileBlobs[fileUri] = file;
+                } else {
+                    await showAlert('הדפדפן שלך לא תומך בבחירת קובץ מתקדם. אנא השתמש בChrome, Edge או Firefox עדכני.');
+                }
+            } catch (err) {
+                if (err.name !== 'AbortError') {
+                    await showAlert('שגיאה בבחירת קובץ: ' + err.message);
+                }
             }
         });
     }
@@ -855,10 +890,14 @@ function openLinkModal(projectId, linkId) {
     if (clearBtn) {
         clearBtn.addEventListener('click', (e) => {
             e.preventDefault();
-            fileInput.value = '';
+            selectedFileUrl = '';
             displayDiv.style.display = 'none';
+            filePickerBtn.style.display = 'block';
         });
     }
+
+    // Store selected file URL in overlay for save function
+    overlay.selectedFileUrl = selectedFileUrl;
 
     overlay.querySelectorAll('.link-icon-opt').forEach(b => {
         b.addEventListener('click', () => {
@@ -880,8 +919,7 @@ function closeLinkModal() {
 async function saveLinkFromModal(projectId, linkId) {
     const name = document.getElementById('linkName').value.trim();
     const urlInput = document.getElementById('linkUrl');
-    const fileInput = document.getElementById('linkFile');
-    const displayDiv = document.getElementById('fileDisplayName');
+    const modal = document.getElementById('linkModal');
     const selected = document.querySelector('#linkIconPicker .link-icon-opt.selected');
     const icon = selected ? selected.dataset.icon : 'link';
 
@@ -904,9 +942,9 @@ async function saveLinkFromModal(projectId, linkId) {
             url = 'https://' + url;
         }
     } else if (linkType === 'file') {
-        const file = fileInput.files[0];
-        if (file) {
-            url = 'file://' + file.name;
+        const selectedFileUrl = modal.selectedFileUrl;
+        if (selectedFileUrl) {
+            url = selectedFileUrl;
         } else if (existingLink && existingLink.url.startsWith('file:')) {
             url = existingLink.url;
         } else {

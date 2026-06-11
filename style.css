@@ -722,6 +722,29 @@ input {
     color: var(--blue-d);
 }
 
+/* File picker button */
+.file-picker-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    border-radius: var(--r-md);
+    color: var(--ink-s);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    transition: background 0.12s, border-color 0.12s;
+}
+
+.file-picker-btn:hover {
+    background: var(--bg);
+    border-color: var(--line-h);
+}
+
 /* File selected display */
 .file-selected-display {
     padding: 8px 10px;
