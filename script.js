@@ -5,7 +5,8 @@ const DB = {
     backup: 'tb_backup',
     currentProject: 'tb_currentProject',
     columns: 'tb_columns',
-    taskTypes: 'tb_task_types'
+    taskTypes: 'tb_task_types',
+    user: 'tb_user'
 };
 
 const DEFAULT_USER = { name: 'דנה גולן', role: 'מנהל פרויקטים', hue: 200 };
@@ -150,13 +151,33 @@ function showPrompt(message, defaultValue = '', title) {
 }
 
 // ===== Init =====
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     initNextTaskId();
     setupEventListeners();
     renderUserUI();
+    migrateTaskOwnership();
     loadProjects();
     restoreCurrentProject();
+
+    if (!localStorage.getItem(DB.user)) {
+        openUserProfileModal();
+    }
+
+    if (window.FSSync) {
+        await FSSync.init();
+        renderSyncStatusUI();
+    }
 });
+
+function migrateTaskOwnership() {
+    const tasks = getAllTasks();
+    let changed = false;
+    tasks.forEach(t => {
+        if (t.createdBy === undefined) { t.createdBy = 'unknown'; changed = true; }
+        if (t.updatedAt === undefined) { t.updatedAt = t.createdAt || new Date().toISOString(); changed = true; }
+    });
+    if (changed) localStorage.setItem(DB.tasks, JSON.stringify(tasks));
+}
 
 function initNextTaskId() {
     const all = getAllTasks();
@@ -197,6 +218,7 @@ function createBackup() {
         timestamp: new Date().toISOString()
     };
     localStorage.setItem(DB.backup, JSON.stringify(backup));
+    if (window.FSSync) FSSync.scheduleSave();
 }
 
 function getColumns() {
@@ -322,6 +344,25 @@ function renderUserUI() {
         const roleEl = card.querySelector('.user-role');
         if (roleEl) roleEl.textContent = u.role;
     }
+}
+
+function renderSyncStatusUI() {
+    const settingsBtn = document.querySelectorAll('.topbar-icon-btn')[1];
+    if (!settingsBtn) return;
+    settingsBtn.style.position = 'relative';
+    let dot = settingsBtn.querySelector('.sync-status-dot');
+    if (!window.FSSync || !FSSync.isSupported()) {
+        if (dot) dot.remove();
+        return;
+    }
+    if (!dot) {
+        dot = document.createElement('span');
+        dot.className = 'sync-status-dot';
+        settingsBtn.appendChild(dot);
+    }
+    dot.classList.remove('connected', 'error', 'disconnected');
+    dot.classList.add(FSSync.status);
+    dot.title = FSSync.getStatusLabel();
 }
 
 function openUserProfileModal() {
@@ -1075,7 +1116,9 @@ async function addTask(data) {
         taskType: data.taskType || '',
         comments: 0,
         attachments: 0,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        createdBy: getUser().name
     };
 
     const tasks = getAllTasks();
@@ -1101,18 +1144,31 @@ function updateTask(id, data) {
         task.dueIn = data.dueIn !== undefined ? data.dueIn : null;
     }
     if (data.taskType !== undefined) task.taskType = data.taskType;
+    task.updatedAt = new Date().toISOString();
     saveTasks(tasks);
     loadProjects();
     rerenderCurrentView();
 }
 
+function canDeleteTask(task) {
+    const user = getUser();
+    return !task.createdBy || task.createdBy === 'unknown' || task.createdBy === user.name;
+}
+
 async function deleteTask(id, event) {
     if (event) event.stopPropagation();
+    const tasks = getAllTasks();
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
+    if (!canDeleteTask(task)) {
+        await showAlert('ניתן למחוק רק משימות שיצרת בעצמך');
+        return;
+    }
     const ok = await showConfirm('למחוק את המשימה?', 'מחיקת משימה', 'מחק', 'ביטול');
     if (!ok) return;
 
-    const tasks = getAllTasks().filter(t => t.id !== id);
-    saveTasks(tasks);
+    saveTasks(tasks.filter(t => t.id !== id));
+    if (window.FSSync) FSSync.recordTombstone(id);
     loadProjects();
     rerenderCurrentView();
     closeModal();
@@ -1286,6 +1342,7 @@ function buildCard(task) {
                 </span>
             ` : ''}
             <div class="card-trailing">
+                ${task.createdBy && task.createdBy !== 'unknown' ? `<span class="card-creator" title="נוצר ע״י ${task.createdBy}">${task.createdBy}</span>` : ''}
                 ${task.assignee ? `<div class="avatar avatar-sm" style="--hue: ${nameHue(task.assignee)};" title="${task.assignee}">${initials(task.assignee)}</div>` : ''}
             </div>
         </div>
@@ -1473,7 +1530,7 @@ function buildModal(task, isNew, defaultColumnId) {
                 </div>
             </div>
             <div class="modal-footer">
-                ${!isNew ? `<button class="btn-danger" onclick="deleteTask(${t.id});">מחק</button>` : ''}
+                ${!isNew && canDeleteTask(t) ? `<button class="btn-danger" onclick="deleteTask(${t.id});">מחק</button>` : ''}
                 <div style="margin-inline-start: auto; display: flex; gap: 8px;">
                     <button class="btn-secondary" onclick="closeModal()">ביטול</button>
                     <button class="btn-primary" onclick="saveTaskFromModal(${isNew ? 'null' : t.id})">${isNew ? 'צור משימה' : 'שמור'}</button>
@@ -1818,7 +1875,7 @@ function renderSearchPage() {
                                 <td>${t.due || ''}</td>
                                 <td>
                                     <button class="card-action-btn" type="button" aria-label="ערוך" onclick="openEditModalForTask(${t.id})">${ICONS.pencil}</button>
-                                    <button class="card-action-btn delete" type="button" aria-label="מחק" onclick="deleteTask(${t.id}, event)">×</button>
+                                    ${canDeleteTask(t) ? `<button class="card-action-btn delete" type="button" aria-label="מחק" onclick="deleteTask(${t.id}, event)">×</button>` : ''}
                                 </td>
                             </tr>
                         `).join('')}
@@ -1953,7 +2010,7 @@ function renderList() {
                         <td>${t.due || ''}</td>
                         <td>
                             <button class="card-action-btn" type="button" aria-label="ערוך" onclick="openEditModal(${t.id})">${ICONS.pencil}</button>
-                            <button class="card-action-btn delete" type="button" aria-label="מחק" onclick="deleteTask(${t.id}, event)">×</button>
+                            ${canDeleteTask(t) ? `<button class="card-action-btn delete" type="button" aria-label="מחק" onclick="deleteTask(${t.id}, event)">×</button>` : ''}
                         </td>
                     </tr>
                 `).join('')}
@@ -2166,6 +2223,8 @@ function openSettingsMenu(anchor) {
     const pop = document.createElement('div');
     pop.className = 'popover';
     pop.id = 'activePopover';
+    const fsLabel = window.FSSync ? FSSync.getStatusLabel() : 'תכונה זו זמינה רק ב-Chrome/Edge';
+    const fsDisabled = !window.FSSync || !FSSync.isSupported();
     pop.innerHTML = `
         <div class="popover-title">הגדרות</div>
         <div class="popover-menu">
@@ -2173,6 +2232,7 @@ function openSettingsMenu(anchor) {
             <button class="popover-menu-item" type="button" onclick="document.getElementById('importFile').click()">${ICONS.import} ייבא JSON</button>
             <button class="popover-menu-item" type="button" onclick="showBackupInfo()">${ICONS.save} פרטי גיבוי</button>
             <button class="popover-menu-item" type="button" onclick="openManageTypesModal()">${ICONS.tag} ניהול סוגי משימות</button>
+            <button class="popover-menu-item" type="button" ${fsDisabled ? 'disabled title="תכונה זו זמינה רק ב-Chrome/Edge"' : ''} onclick="FSSync.connect()">${ICONS.save} ${fsLabel}</button>
             <button class="popover-menu-item danger" type="button" onclick="clearAllData()">${ICONS.trash} נקה את כל הנתונים</button>
         </div>
     `;
