@@ -801,12 +801,8 @@ function openLinkModal(projectId, linkId) {
                     <div id="linkInputContainer">
                         <input type="text" id="linkUrl" class="field-input" value="${link && linkType === 'http' ? link.url : ''}" placeholder="https://..." style="display: ${linkType === 'http' ? 'block' : 'none'}">
                         <div style="display: ${linkType === 'file' ? 'block' : 'none'}">
-                            <button type="button" id="filePickerBtn" class="file-picker-btn">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
-                                בחר קובץ
-                            </button>
-                            <input type="text" id="linkFileUrl" class="field-input" value="${linkType === 'file' && link ? link.url : ''}" placeholder="file:///C:/path/to/file.pdf" style="margin-top: 8px; direction: ltr; text-align: left;">
-                            <div class="field-hint">ניתן לערוך את הנתיב המלא ידנית</div>
+                            <input type="text" id="linkFileUrl" class="field-input" value="${linkType === 'file' && link ? link.url : ''}" placeholder="file:///C:/path/to/file.pdf" style="direction: ltr; text-align: left;">
+                            <div class="field-hint">העתק את הנתיב המלא: סייר Windows → Shift+לחיצה ימנית על הקובץ → "העתק כנתיב"</div>
                         </div>
                     </div>
                 </div>
@@ -846,35 +842,6 @@ function openLinkModal(projectId, linkId) {
         });
     });
 
-    // File picker button - fills the URL field with the picked file
-    const filePickerBtn = overlay.querySelector('#filePickerBtn');
-    const fileUrlInput = overlay.querySelector('#linkFileUrl');
-
-    if (filePickerBtn) {
-        filePickerBtn.addEventListener('click', async (e) => {
-            e.preventDefault();
-            try {
-                if ('showOpenFilePicker' in window) {
-                    const [fileHandle] = await window.showOpenFilePicker();
-                    const file = await fileHandle.getFile();
-
-                    const fullPath = file.webkitRelativePath || file.name;
-                    const fileUri = 'file:///' + fullPath.replace(/\\/g, '/');
-
-                    fileUrlInput.value = fileUri;
-
-                    window._fileBlobs = window._fileBlobs || {};
-                    window._fileBlobs[fileUri] = file;
-                } else {
-                    await showAlert('הדפדפן שלך לא תומך בבחירת קובץ מתקדם. אנא השתמש בChrome, Edge או Firefox עדכני.');
-                }
-            } catch (err) {
-                if (err.name !== 'AbortError') {
-                    await showAlert('שגיאה בבחירת קובץ: ' + err.message);
-                }
-            }
-        });
-    }
 
     overlay.querySelectorAll('.link-icon-opt').forEach(b => {
         b.addEventListener('click', () => {
