@@ -94,6 +94,9 @@ const FSSync = {
     saveTimer: null,
     saving: false,
     pendingTombstones: [],
+    pollTimer: null,
+    lastSeenMtime: 0,
+    boundOnVisible: null,
 
     isSupported() {
         return typeof window.showOpenFilePicker === 'function';
@@ -126,6 +129,7 @@ const FSSync = {
         }
         this.status = 'connected';
         await this.pullRemote();
+        this.startAutoSync();
     },
 
     async verifyPermission(handle, requestIfNeeded) {
@@ -147,6 +151,7 @@ const FSSync = {
                     this.status = 'connected';
                     await this.pullRemote();
                     await this.pushLocal();
+                    this.startAutoSync();
                     renderSyncStatusUI();
                     closePopovers();
                     return;
@@ -176,6 +181,7 @@ const FSSync = {
             this.status = 'connected';
             await this.pullRemote();
             await this.pushLocal();
+            this.startAutoSync();
             renderSyncStatusUI();
             closePopovers();
             await showAlert('חובר בהצלחה לקובץ המשותף');
@@ -188,8 +194,10 @@ const FSSync = {
     },
 
     async disconnect() {
+        this.stopAutoSync();
         this.fileHandle = null;
         this.status = 'disconnected';
+        this.lastSeenMtime = 0;
         await idbDeleteHandle();
         renderSyncStatusUI();
     },
@@ -198,6 +206,7 @@ const FSSync = {
         const granted = await this.verifyPermission(this.fileHandle, true);
         if (!granted) throw new Error('permission denied');
         const file = await this.fileHandle.getFile();
+        this.lastSeenMtime = file.lastModified; // for auto-sync change detection
         const text = await file.text();
         if (!text.trim()) return null;
         return JSON.parse(text); // throws on invalid JSON - caller decides fallback
@@ -209,6 +218,8 @@ const FSSync = {
         const writable = await this.fileHandle.createWritable();
         await writable.write(JSON.stringify(data, null, 2));
         await writable.close();
+        // Record our own write's mtime so the poller doesn't re-pull it.
+        try { this.lastSeenMtime = (await this.fileHandle.getFile()).lastModified; } catch (e) {}
     },
 
     scheduleSave() {
@@ -220,6 +231,45 @@ const FSSync = {
     recordTombstone(taskId) {
         this.pendingTombstones.push({ id: taskId, deletedAt: new Date().toISOString() });
         this.scheduleSave();
+    },
+
+    // ===== Auto-sync: pick up other clients' changes without a reload =====
+    FS_POLL_INTERVAL_MS: 4000,
+
+    startAutoSync() {
+        if (!this.fileHandle || this.status === 'unsupported') return;
+        if (this.pollTimer) return; // already running
+        this.pollTimer = setInterval(() => this.pullIfRemoteChanged(), this.FS_POLL_INTERVAL_MS);
+        // Pull immediately when the tab regains focus / becomes visible, so
+        // switching back to a window shows the latest without waiting a tick.
+        this.boundOnVisible = () => {
+            if (document.visibilityState === 'visible') this.pullIfRemoteChanged();
+        };
+        document.addEventListener('visibilitychange', this.boundOnVisible);
+        window.addEventListener('focus', this.boundOnVisible);
+    },
+
+    stopAutoSync() {
+        if (this.pollTimer) { clearInterval(this.pollTimer); this.pollTimer = null; }
+        if (this.boundOnVisible) {
+            document.removeEventListener('visibilitychange', this.boundOnVisible);
+            window.removeEventListener('focus', this.boundOnVisible);
+            this.boundOnVisible = null;
+        }
+    },
+
+    // Cheap check: only parse + merge the shared file when its on-disk
+    // modification time advanced past what we last read/wrote ourselves.
+    async pullIfRemoteChanged() {
+        if (!this.fileHandle || this.status === 'unsupported' || this.saving) return;
+        let file;
+        try {
+            file = await this.fileHandle.getFile();
+        } catch (e) {
+            return; // permission/handle lost - leave it to explicit reconnect
+        }
+        if (this.lastSeenMtime && file.lastModified <= this.lastSeenMtime) return;
+        await this.pullRemote();
     },
 
     async pullRemote() {
