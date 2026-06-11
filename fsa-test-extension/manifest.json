@@ -1,0 +1,9 @@
+{
+  "manifest_version": 3,
+  "name": "FS Access API Test",
+  "version": "1.0",
+  "description": "Minimal test: pick a directory and write a JSON file using the File System Access API.",
+  "action": {
+    "default_popup": "test.html"
+  }
+}
