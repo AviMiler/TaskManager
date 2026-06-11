@@ -934,7 +934,7 @@ function openLinkModal(projectId, linkId) {
     if (vscHelpBtn) {
         vscHelpBtn.addEventListener('click', (e) => {
             e.preventDefault();
-            showAlert('כדי לקבל נתיב מלא לתיקייה:\n\n1. פתח את סייר הקבצים של Windows\n2. נווט לתיקייה הרצויה\n3. לחץ Shift + לחיצה ימנית על התיקייה\n4. בחר "העתק כנתיב" (Copy as path)\n5. הדבק כאן (Ctrl+V) - המרכאות יוסרו אוטומטית\n\nהקישור ייפתח בתיקייה ב-VS Code');
+            showAlert('כדי לקבל נתיב מלא לתיקייה:\n\n1. פתח את סייר הקבצים של Windows\n2. נווט לתיקייה הרצויה\n3. לחץ Shift + לחיצה ימנית על התיקייה\n4. בחר "העתק כנתיב" (Copy as path)\n5. הדבק כאן (Ctrl+V) - המרכאות יוסרו אוטומטית\n\nהקישור ייפתח בתיקייה ב-VS Code\n\n💡 כדי שהתיקייה תיפתח בחלון חדש (ולא תחליף את הקיים):\n1. פתח VS Code\n2. Ctrl+, (הגדרות)\n3. חפש: openFoldersInNewWindow\n4. שנה את הערך ל-"on"');
         });
     }
 
