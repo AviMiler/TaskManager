@@ -193,6 +193,51 @@ const FSSync = {
         }
     },
 
+    supportsSavePicker() {
+        return typeof window.showSaveFilePicker === 'function';
+    },
+
+    // Let the user choose WHERE the shared file lives (folder + name) and
+    // create it there, seeding it with the current local data. Picking an
+    // existing file is safe too: pushLocal reads-merges-writes, so its
+    // contents are merged in rather than blindly overwritten.
+    async createNew() {
+        if (!this.supportsSavePicker()) return;
+        try {
+            let handle;
+            try {
+                handle = await window.showSaveFilePicker({
+                    suggestedName: 'taskboard-shared.json',
+                    types: [{ description: 'JSON', accept: { 'application/json': ['.json'] } }]
+                });
+            } catch (e) {
+                if (e.name === 'AbortError') return; // user cancelled, no error
+                throw e;
+            }
+
+            const granted = await this.verifyPermission(handle, true);
+            if (!granted) {
+                this.status = 'error';
+                renderSyncStatusUI();
+                return;
+            }
+
+            this.fileHandle = handle;
+            await idbSetHandle(handle);
+            this.status = 'connected';
+            await this.pushLocal();   // write current data into the chosen location
+            this.startAutoSync();
+            renderSyncStatusUI();
+            closePopovers();
+            await showAlert('נבחר מיקום והקובץ המשותף מוכן. שתף את הקובץ עם שאר הצוות.');
+        } catch (e) {
+            console.error('FSSync.createNew', e);
+            this.status = 'error';
+            renderSyncStatusUI();
+            await showAlert('שגיאה ביצירת קובץ משותף במיקום שנבחר');
+        }
+    },
+
     async disconnect() {
         this.stopAutoSync();
         this.fileHandle = null;

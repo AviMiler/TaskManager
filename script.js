@@ -2392,6 +2392,7 @@ function openSettingsMenu(anchor) {
     pop.id = 'activePopover';
     const fsLabel = window.FSSync ? FSSync.getStatusLabel() : 'תכונה זו זמינה רק ב-Chrome/Edge';
     const fsDisabled = !window.FSSync || !FSSync.isSupported();
+    const canCreate = window.FSSync && FSSync.supportsSavePicker();
     pop.innerHTML = `
         <div class="popover-title">הגדרות</div>
         <div class="popover-menu">
@@ -2400,6 +2401,7 @@ function openSettingsMenu(anchor) {
             <button class="popover-menu-item" type="button" data-action="showBackupInfo()">${ICONS.save} פרטי גיבוי</button>
             <button class="popover-menu-item" type="button" data-action="openManageTypesModal()">${ICONS.tag} ניהול סוגי משימות</button>
             <button class="popover-menu-item" type="button" ${fsDisabled ? 'disabled title="תכונה זו זמינה רק ב-Chrome/Edge"' : ''} data-action="FSSync.connect()">${ICONS.save} ${fsLabel}</button>
+            <button class="popover-menu-item" type="button" ${canCreate ? '' : 'disabled title="תכונה זו זמינה רק ב-Chrome/Edge"'} data-action="FSSync.createNew()">${ICONS.save} בחר מיקום לקובץ משותף חדש…</button>
             <button class="popover-menu-item danger" type="button" data-action="clearAllData()">${ICONS.trash} נקה את כל הנתונים</button>
         </div>
     `;
