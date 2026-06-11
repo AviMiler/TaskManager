@@ -852,7 +852,7 @@ function openLinkModal(projectId, linkId) {
     // File picker button
     const filePickerBtn = overlay.querySelector('#filePickerBtn');
     const displayDiv = overlay.querySelector('#fileDisplayName');
-    let selectedFileUrl = linkType === 'file' && fileDisplayName ? fileDisplayName : '';
+    overlay.selectedFileUrl = linkType === 'file' && link ? link.url : '';
 
     if (filePickerBtn) {
         filePickerBtn.addEventListener('click', async (e) => {
@@ -862,13 +862,11 @@ function openLinkModal(projectId, linkId) {
                     const [fileHandle] = await window.showOpenFilePicker();
                     const file = await fileHandle.getFile();
 
-                    const blobUrl = URL.createObjectURL(file);
                     const fullPath = file.webkitRelativePath || file.name;
                     const fileUri = 'file:///' + fullPath.replace(/\\/g, '/');
 
-                    selectedFileUrl = fileUri;
-                    const displayText = `${fileUri}`;
-                    displayDiv.querySelector('span').textContent = displayText;
+                    overlay.selectedFileUrl = fileUri;
+                    displayDiv.querySelector('span').textContent = fileUri;
                     displayDiv.style.display = 'flex';
                     filePickerBtn.style.display = 'none';
 
@@ -890,14 +888,11 @@ function openLinkModal(projectId, linkId) {
     if (clearBtn) {
         clearBtn.addEventListener('click', (e) => {
             e.preventDefault();
-            selectedFileUrl = '';
+            overlay.selectedFileUrl = '';
             displayDiv.style.display = 'none';
             filePickerBtn.style.display = 'block';
         });
     }
-
-    // Store selected file URL in overlay for save function
-    overlay.selectedFileUrl = selectedFileUrl;
 
     overlay.querySelectorAll('.link-icon-opt').forEach(b => {
         b.addEventListener('click', () => {
