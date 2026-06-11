@@ -7,6 +7,8 @@ const FS_DB_NAME = 'tb_fs_sync';
 const FS_STORE = 'handles';
 const FS_HANDLE_KEY = 'sharedFile';
 const FS_TOMBSTONE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+const FS_SCHEMA_VERSION = 2;        // shared-file envelope version (see pushLocal)
+const FS_PUSH_MAX_ATTEMPTS = 3;     // optimistic-concurrency retries on write
 
 function idbOpen() {
     return new Promise((resolve, reject) => {
@@ -250,34 +252,61 @@ const FSSync = {
         if (!this.fileHandle || this.saving) return;
         this.saving = true;
         try {
-            let remote = null;
-            try { remote = await this.readFile(); } catch (e) { /* missing/invalid - overwrite */ }
-            remote = remote || {};
+            let merged = null;
 
-            const tombstones = mergeTombstones(remote.tombstones || [], this.pendingTombstones);
-            this.pendingTombstones = [];
+            for (let attempt = 1; attempt <= FS_PUSH_MAX_ATTEMPTS; attempt++) {
+                let remote = null;
+                try { remote = await this.readFile(); } catch (e) { /* missing/invalid - overwrite */ }
+                remote = remote || {};
+                const baseGen = remote.generation || 0;
 
-            const mergedTasks = mergeById(remote.tasks || [], getAllTasks(), tombstones);
-            const mergedProjects = mergeById(remote.projects || [], getProjects());
-            const mergedColumns = mergeById(remote.columns || [], getColumns());
-            const mergedTypes = mergeById(remote.taskTypes || [], getTaskTypes());
+                const tombstones = mergeTombstones(remote.tombstones || [], this.pendingTombstones);
+                const mergedTasks = mergeById(remote.tasks || [], getAllTasks(), tombstones);
+                const mergedProjects = mergeById(remote.projects || [], getProjects());
+                const mergedColumns = mergeById(remote.columns || [], getColumns());
+                const mergedTypes = mergeById(remote.taskTypes || [], getTaskTypes());
 
-            await this.writeFile({
-                projects: mergedProjects,
-                tasks: mergedTasks,
-                columns: mergedColumns,
-                taskTypes: mergedTypes,
-                tombstones,
-                lastModified: new Date().toISOString(),
-                lastModifiedBy: getUser().name
-            });
+                // Optimistic-concurrency guard: re-read right before writing.
+                // If another client advanced `generation` since we read, redo
+                // the merge against their version instead of clobbering it.
+                // (The File System Access API offers no cross-process lock;
+                // this narrows the race window. A true lock arrives with the
+                // directory-handle work / the HTTP backend.)
+                let check = null;
+                try { check = await this.readFile(); } catch (e) { /* treat as unchanged */ }
+                const currentGen = (check && check.generation) || 0;
+                if (currentGen !== baseGen && attempt < FS_PUSH_MAX_ATTEMPTS) {
+                    await new Promise(r => setTimeout(r, 50 + Math.random() * 150));
+                    continue;
+                }
 
-            localStorage.setItem(DB.tasks, JSON.stringify(mergedTasks));
-            localStorage.setItem(DB.projects, JSON.stringify(mergedProjects));
-            localStorage.setItem(DB.columns, JSON.stringify(mergedColumns));
-            localStorage.setItem(DB.taskTypes, JSON.stringify(mergedTypes));
-            loadProjects();
-            rerenderCurrentView();
+                await this.writeFile({
+                    schemaVersion: FS_SCHEMA_VERSION,
+                    generation: baseGen + 1,
+                    projects: mergedProjects,
+                    tasks: mergedTasks,
+                    columns: mergedColumns,
+                    taskTypes: mergedTypes,
+                    tombstones,
+                    lastModified: new Date().toISOString(),
+                    lastModifiedBy: getUser().name,
+                    lastModifiedById: getUser().id
+                });
+
+                merged = { mergedTasks, mergedProjects, mergedColumns, mergedTypes };
+                break;
+            }
+
+            if (merged) {
+                // Only clear pending tombstones once they are safely persisted.
+                this.pendingTombstones = [];
+                localStorage.setItem(DB.tasks, JSON.stringify(merged.mergedTasks));
+                localStorage.setItem(DB.projects, JSON.stringify(merged.mergedProjects));
+                localStorage.setItem(DB.columns, JSON.stringify(merged.mergedColumns));
+                localStorage.setItem(DB.taskTypes, JSON.stringify(merged.mergedTypes));
+                loadProjects();
+                rerenderCurrentView();
+            }
 
             this.status = 'connected';
         } catch (e) {
