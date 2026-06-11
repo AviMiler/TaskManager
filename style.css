@@ -722,6 +722,13 @@ input {
     color: var(--blue-d);
 }
 
+.field-hint {
+    margin-top: 4px;
+    font-size: 11px;
+    color: var(--ink-s);
+    opacity: 0.7;
+}
+
 /* File picker button */
 .file-picker-btn {
     display: flex;

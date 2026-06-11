@@ -801,15 +801,12 @@ function openLinkModal(projectId, linkId) {
                     <div id="linkInputContainer">
                         <input type="text" id="linkUrl" class="field-input" value="${link && linkType === 'http' ? link.url : ''}" placeholder="https://..." style="display: ${linkType === 'http' ? 'block' : 'none'}">
                         <div style="display: ${linkType === 'file' ? 'block' : 'none'}">
-                            <button type="button" id="filePickerBtn" class="file-picker-btn" style="display: block;">
+                            <button type="button" id="filePickerBtn" class="file-picker-btn">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
                                 בחר קובץ
                             </button>
-                            <div id="fileDisplayName" class="file-selected-display" style="${fileDisplayName ? '' : 'display: none;'}">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
-                                <span>${fileDisplayName}</span>
-                                <button type="button" class="file-clear-btn" aria-label="הסר קובץ">×</button>
-                            </div>
+                            <input type="text" id="linkFileUrl" class="field-input" value="${linkType === 'file' && link ? link.url : ''}" placeholder="file:///C:/path/to/file.pdf" style="margin-top: 8px; direction: ltr; text-align: left;">
+                            <div class="field-hint">ניתן לערוך את הנתיב המלא ידנית</div>
                         </div>
                     </div>
                 </div>
@@ -849,10 +846,9 @@ function openLinkModal(projectId, linkId) {
         });
     });
 
-    // File picker button
+    // File picker button - fills the URL field with the picked file
     const filePickerBtn = overlay.querySelector('#filePickerBtn');
-    const displayDiv = overlay.querySelector('#fileDisplayName');
-    overlay.selectedFileUrl = linkType === 'file' && link ? link.url : '';
+    const fileUrlInput = overlay.querySelector('#linkFileUrl');
 
     if (filePickerBtn) {
         filePickerBtn.addEventListener('click', async (e) => {
@@ -865,10 +861,7 @@ function openLinkModal(projectId, linkId) {
                     const fullPath = file.webkitRelativePath || file.name;
                     const fileUri = 'file:///' + fullPath.replace(/\\/g, '/');
 
-                    overlay.selectedFileUrl = fileUri;
-                    displayDiv.querySelector('span').textContent = fileUri;
-                    displayDiv.style.display = 'flex';
-                    filePickerBtn.style.display = 'none';
+                    fileUrlInput.value = fileUri;
 
                     window._fileBlobs = window._fileBlobs || {};
                     window._fileBlobs[fileUri] = file;
@@ -880,17 +873,6 @@ function openLinkModal(projectId, linkId) {
                     await showAlert('שגיאה בבחירת קובץ: ' + err.message);
                 }
             }
-        });
-    }
-
-    // Clear file button
-    const clearBtn = overlay.querySelector('.file-clear-btn');
-    if (clearBtn) {
-        clearBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            overlay.selectedFileUrl = '';
-            displayDiv.style.display = 'none';
-            filePickerBtn.style.display = 'block';
         });
     }
 
@@ -937,14 +919,11 @@ async function saveLinkFromModal(projectId, linkId) {
             url = 'https://' + url;
         }
     } else if (linkType === 'file') {
-        const selectedFileUrl = modal.selectedFileUrl;
-        if (selectedFileUrl) {
-            url = selectedFileUrl;
-        } else if (existingLink && existingLink.url.startsWith('file:')) {
-            url = existingLink.url;
-        } else {
-            await showAlert('בחר קובץ');
-            return;
+        const fileUrlInput = document.getElementById('linkFileUrl');
+        url = fileUrlInput ? fileUrlInput.value.trim() : '';
+        if (!url) { await showAlert('הכנס נתיב קובץ'); return; }
+        if (!url.startsWith('file:')) {
+            url = 'file:///' + url.replace(/\\/g, '/').replace(/^\/+/, '');
         }
     }
 
