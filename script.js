@@ -416,10 +416,10 @@ function openUserProfileModal() {
     overlay.className = 'modal-overlay';
     overlay.id = 'taskModal';
     overlay.innerHTML = `
-        <div class="modal" onclick="event.stopPropagation()">
+        <div class="modal" data-action="event.stopPropagation()">
             <div class="modal-header">
                 <h2 class="modal-title">פרטי המשתמש</h2>
-                <button class="modal-close" type="button" aria-label="סגור" onclick="closeModal()">×</button>
+                <button class="modal-close" type="button" aria-label="סגור" data-action="closeModal()">×</button>
             </div>
             <div class="modal-body">
                 <div class="field">
@@ -443,8 +443,8 @@ function openUserProfileModal() {
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn-secondary" type="button" onclick="closeModal()">ביטול</button>
-                <button class="btn-primary" type="button" onclick="saveUserFromModal()">שמור</button>
+                <button class="btn-secondary" type="button" data-action="closeModal()">ביטול</button>
+                <button class="btn-primary" type="button" data-action="saveUserFromModal()">שמור</button>
             </div>
         </div>
     `;
@@ -552,10 +552,10 @@ function openProjectSettings(id, event) {
     overlay.id = 'projectSettingsModal';
 
     overlay.innerHTML = `
-        <div class="modal" onclick="event.stopPropagation()" style="max-width: 480px;">
+        <div class="modal" data-action="event.stopPropagation()" style="max-width: 480px;">
             <div class="modal-header">
                 <h2 class="modal-title">הגדרות פרויקט</h2>
-                <button class="modal-close" type="button" aria-label="סגור" onclick="closeProjectSettings()">×</button>
+                <button class="modal-close" type="button" aria-label="סגור" data-action="closeProjectSettings()">×</button>
             </div>
             <div class="modal-body">
                 <div class="field">
@@ -581,8 +581,8 @@ function openProjectSettings(id, event) {
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn-secondary" onclick="closeProjectSettings()">ביטול</button>
-                <button class="btn-primary" onclick="saveProjectSettings(${id})">שמור</button>
+                <button class="btn-secondary" data-action="closeProjectSettings()">ביטול</button>
+                <button class="btn-primary" data-action="saveProjectSettings(${id})">שמור</button>
             </div>
         </div>
     `;
@@ -677,7 +677,7 @@ function loadProjects() {
                 <span class="project-dot"></span>
                 <span class="project-name">${p.name}</span>
                 <span class="project-count">${taskCount}</span>
-                <button class="project-delete-btn" onclick="deleteProject(${p.id}, event)" title="מחק">×</button>
+                <button class="project-delete-btn" data-action="deleteProject(${p.id}, event)" title="מחק">×</button>
             `;
             list.appendChild(el);
         });
@@ -860,10 +860,10 @@ function openLinkModal(projectId, linkId) {
     overlay.className = 'modal-overlay';
     overlay.id = 'linkModal';
     overlay.innerHTML = `
-        <div class="modal" onclick="event.stopPropagation()" style="max-width: 440px;">
+        <div class="modal" data-action="event.stopPropagation()" style="max-width: 440px;">
             <div class="modal-header">
                 <h2 class="modal-title">${isNew ? 'קישור חדש' : 'עריכת קישור'}</h2>
-                <button class="modal-close" type="button" aria-label="סגור" onclick="closeLinkModal()">×</button>
+                <button class="modal-close" type="button" aria-label="סגור" data-action="closeLinkModal()">×</button>
             </div>
             <div class="modal-body">
                 <div class="field">
@@ -923,7 +923,7 @@ function openLinkModal(projectId, linkId) {
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn-secondary" type="button" onclick="closeLinkModal()">ביטול</button>
+                <button class="btn-secondary" type="button" data-action="closeLinkModal()">ביטול</button>
                 <button class="btn-primary" type="button" id="saveLinkBtn">שמור</button>
             </div>
         </div>
@@ -1507,10 +1507,10 @@ function buildModal(task, isNew, defaultColumnId) {
     ).join('');
 
     overlay.innerHTML = `
-        <div class="modal" onclick="event.stopPropagation()">
+        <div class="modal" data-action="event.stopPropagation()">
             <div class="modal-header">
                 <h2 class="modal-title">${isNew ? 'משימה חדשה' : 'עריכת משימה'}</h2>
-                <button class="modal-close" type="button" aria-label="סגור" onclick="closeModal()">×</button>
+                <button class="modal-close" type="button" aria-label="סגור" data-action="closeModal()">×</button>
             </div>
             <div class="modal-body">
                 <div class="field">
@@ -1562,10 +1562,10 @@ function buildModal(task, isNew, defaultColumnId) {
                 </div>
             </div>
             <div class="modal-footer">
-                ${!isNew && canDeleteTask(t) ? `<button class="btn-danger" onclick="deleteTask(${t.id});">מחק</button>` : ''}
+                ${!isNew && canDeleteTask(t) ? `<button class="btn-danger" data-action="deleteTask(${t.id});">מחק</button>` : ''}
                 <div style="margin-inline-start: auto; display: flex; gap: 8px;">
-                    <button class="btn-secondary" onclick="closeModal()">ביטול</button>
-                    <button class="btn-primary" onclick="saveTaskFromModal(${isNew ? 'null' : t.id})">${isNew ? 'צור משימה' : 'שמור'}</button>
+                    <button class="btn-secondary" data-action="closeModal()">ביטול</button>
+                    <button class="btn-primary" data-action="saveTaskFromModal(${isNew ? 'null' : t.id})">${isNew ? 'צור משימה' : 'שמור'}</button>
                 </div>
             </div>
         </div>
@@ -1704,10 +1704,10 @@ function openDailyModal() {
     overlay.className = 'modal-overlay';
     overlay.id = 'dailyModal';
     overlay.innerHTML = `
-        <div class="modal daily-modal" onclick="event.stopPropagation()">
+        <div class="modal daily-modal" data-action="event.stopPropagation()">
             <div class="modal-header">
                 <h2 class="modal-title">דיילי - ${formatHebrewDate(today.id)}</h2>
-                <button class="modal-close" type="button" aria-label="סגור" onclick="closeDailyModal()">×</button>
+                <button class="modal-close" type="button" aria-label="סגור" data-action="closeDailyModal()">×</button>
             </div>
             <div class="modal-body">
                 ${renderDailyTable(today, true)}
@@ -1878,7 +1878,7 @@ function openSearchResults(term) {
         panel.innerHTML = `<div class="search-empty">אין תוצאות עבור "<strong>${escapeHtml(term)}</strong>"</div>`;
     } else {
         panel.innerHTML = `
-            <div class="search-header" onclick="openSearchPage('${escapeAttr(term)}')" style="cursor: pointer; user-select: none;">${total} תוצאות</div>
+            <div class="search-header" data-action="openSearchPage('${escapeAttr(term)}')" style="cursor: pointer; user-select: none;">${total} תוצאות</div>
             ${matches.map(t => {
                 const proj = projectMap[t.projectId];
                 const ty   = t.taskType ? typeMap[t.taskType] : null;
@@ -1977,7 +1977,7 @@ function renderSearchPage() {
 
     page.innerHTML = `
         <div class="search-page-header">
-            <button class="search-back-btn" type="button" onclick="closeSearchPage()">← חזרה</button>
+            <button class="search-back-btn" type="button" data-action="closeSearchPage()">← חזרה</button>
             <span class="search-page-title">תוצאות עבור "<strong>${escapeHtml(searchPageTerm)}</strong>"</span>
             <span class="search-page-count">${matches.length} תוצאות</span>
         </div>
@@ -1987,7 +1987,7 @@ function renderSearchPage() {
                 <span class="search-filter-label">פרויקט:</span>
                 <div class="search-filter-chips">
                     ${projectsWithMatches.map(p => `
-                        <button class="search-filter-chip ${searchPageFilters.projectId === p.id ? 'active' : ''}" type="button" onclick="setSearchFilter('projectId', ${p.id})">${p.name}</button>
+                        <button class="search-filter-chip ${searchPageFilters.projectId === p.id ? 'active' : ''}" type="button" data-action="setSearchFilter('projectId', ${p.id})">${p.name}</button>
                     `).join('')}
                 </div>
             ` : ''}
@@ -1995,7 +1995,7 @@ function renderSearchPage() {
                 <span class="search-filter-label">תעדוף:</span>
                 <div class="search-filter-chips">
                     ${prioritiesInMatches.map(pri => `
-                        <button class="search-filter-chip ${searchPageFilters.priority === pri ? 'active' : ''}" type="button" onclick="setSearchFilter('priority', '${pri}')">${priLabels[pri] || pri}</button>
+                        <button class="search-filter-chip ${searchPageFilters.priority === pri ? 'active' : ''}" type="button" data-action="setSearchFilter('priority', '${pri}')">${priLabels[pri] || pri}</button>
                     `).join('')}
                 </div>
             ` : ''}
@@ -2003,11 +2003,11 @@ function renderSearchPage() {
                 <span class="search-filter-label">מצב:</span>
                 <div class="search-filter-chips">
                     ${statesInMatches.map(s => `
-                        <button class="search-filter-chip ${searchPageFilters.state === s ? 'active' : ''}" type="button" onclick="setSearchFilter('state', '${s}')">${stateLabel(s)}</button>
+                        <button class="search-filter-chip ${searchPageFilters.state === s ? 'active' : ''}" type="button" data-action="setSearchFilter('state', '${s}')">${stateLabel(s)}</button>
                     `).join('')}
                 </div>
             ` : ''}
-            ${hasFilters ? `<button class="search-filter-clear" type="button" onclick="clearSearchFilters()">נקה הכל</button>` : ''}
+            ${hasFilters ? `<button class="search-filter-clear" type="button" data-action="clearSearchFilters()">נקה הכל</button>` : ''}
         </div>
         ` : ''}
         <div class="search-page-body">
@@ -2041,8 +2041,8 @@ function renderSearchPage() {
                                 <td>${t.assignee ? `<span class="list-assignee">${t.assignee}</span>` : ''}</td>
                                 <td>${t.due || ''}</td>
                                 <td>
-                                    <button class="card-action-btn" type="button" aria-label="ערוך" onclick="openEditModalForTask(${t.id})">${ICONS.pencil}</button>
-                                    ${canDeleteTask(t) ? `<button class="card-action-btn delete" type="button" aria-label="מחק" onclick="deleteTask(${t.id}, event)">×</button>` : ''}
+                                    <button class="card-action-btn" type="button" aria-label="ערוך" data-action="openEditModalForTask(${t.id})">${ICONS.pencil}</button>
+                                    ${canDeleteTask(t) ? `<button class="card-action-btn delete" type="button" aria-label="מחק" data-action="deleteTask(${t.id}, event)">×</button>` : ''}
                                 </td>
                             </tr>
                         `).join('')}
@@ -2141,8 +2141,8 @@ function renderList() {
     list.innerHTML = `
         <div class="list-toolbar">
             <div class="list-scope-toggle">
-                <button class="list-scope-btn ${listScope === 'current' ? 'active' : ''}" data-scope="current" onclick="setListScope('current')" type="button">פרויקט נוכחי</button>
-                <button class="list-scope-btn ${listScope === 'all' ? 'active' : ''}" data-scope="all" onclick="setListScope('all')" type="button">כל הפרויקטים</button>
+                <button class="list-scope-btn ${listScope === 'current' ? 'active' : ''}" data-scope="current" data-action="setListScope('current')" type="button">פרויקט נוכחי</button>
+                <button class="list-scope-btn ${listScope === 'all' ? 'active' : ''}" data-scope="all" data-action="setListScope('all')" type="button">כל הפרויקטים</button>
             </div>
             <span class="list-count">${rawTasks.length} משימות</span>
         </div>
@@ -2176,8 +2176,8 @@ function renderList() {
                         <td>${t.assignee ? `<span class="list-assignee">${t.assignee}</span>` : ''}</td>
                         <td>${t.due || ''}</td>
                         <td>
-                            <button class="card-action-btn" type="button" aria-label="ערוך" onclick="openEditModal(${t.id})">${ICONS.pencil}</button>
-                            ${canDeleteTask(t) ? `<button class="card-action-btn delete" type="button" aria-label="מחק" onclick="deleteTask(${t.id}, event)">×</button>` : ''}
+                            <button class="card-action-btn" type="button" aria-label="ערוך" data-action="openEditModal(${t.id})">${ICONS.pencil}</button>
+                            ${canDeleteTask(t) ? `<button class="card-action-btn delete" type="button" aria-label="מחק" data-action="deleteTask(${t.id}, event)">×</button>` : ''}
                         </td>
                     </tr>
                 `).join('')}
@@ -2228,7 +2228,7 @@ function openFilterMenu(anchor) {
             <div class="popover-label">תעדוף</div>
             <div class="popover-row">
                 ${['high', 'med', 'low'].map(p => `
-                    <button class="popover-chip ${activeFilters.priority === p ? 'active' : ''}" type="button" onclick="setFilter('priority', '${p}')">
+                    <button class="popover-chip ${activeFilters.priority === p ? 'active' : ''}" type="button" data-action="setFilter('priority', '${p}')">
                         ${p === 'high' ? 'גבוה' : p === 'med' ? 'בינוני' : 'נמוך'}
                     </button>
                 `).join('')}
@@ -2238,7 +2238,7 @@ function openFilterMenu(anchor) {
             <div class="popover-section">
                 <div class="popover-label">תגית</div>
                 <div class="popover-row">
-                    ${tags.map(tag => `<button class="popover-chip ${activeFilters.tag === tag ? 'active' : ''}" type="button" onclick="setFilter('tag', '${escapeAttr(tag)}')">${tag}</button>`).join('')}
+                    ${tags.map(tag => `<button class="popover-chip ${activeFilters.tag === tag ? 'active' : ''}" type="button" data-action="setFilter('tag', '${escapeAttr(tag)}')">${tag}</button>`).join('')}
                 </div>
             </div>
         ` : ''}
@@ -2246,13 +2246,13 @@ function openFilterMenu(anchor) {
             <div class="popover-section">
                 <div class="popover-label">אחראי</div>
                 <div class="popover-row">
-                    ${assignees.map(a => `<button class="popover-chip ${activeFilters.assignee === a ? 'active' : ''}" type="button" onclick="setFilter('assignee', '${escapeAttr(a)}')">${a}</button>`).join('')}
+                    ${assignees.map(a => `<button class="popover-chip ${activeFilters.assignee === a ? 'active' : ''}" type="button" data-action="setFilter('assignee', '${escapeAttr(a)}')">${a}</button>`).join('')}
                 </div>
             </div>
         ` : ''}
         <div class="popover-footer">
-            <button class="btn-secondary" type="button" onclick="clearFilters()">נקה הכל</button>
-            <button class="btn-primary" type="button" onclick="closePopovers()">סגור</button>
+            <button class="btn-secondary" type="button" data-action="clearFilters()">נקה הכל</button>
+            <button class="btn-primary" type="button" data-action="closePopovers()">סגור</button>
         </div>
     `;
     positionPopover(pop, anchor);
@@ -2275,7 +2275,7 @@ function openSortMenu(anchor) {
         <div class="popover-title">מיון</div>
         <div class="popover-menu">
             ${opts.map(([k, label]) => `
-                <button class="popover-menu-item ${activeSort === k ? 'active' : ''}" type="button" onclick="setSort('${k}')">
+                <button class="popover-menu-item ${activeSort === k ? 'active' : ''}" type="button" data-action="setSort('${k}')">
                     ${label}
                 </button>
             `).join('')}
@@ -2367,7 +2367,7 @@ function openNotificationsMenu(anchor) {
                 const proj = getProjects().find(p => p.id === t.projectId);
                 const urgency = t.dueIn < 0 ? 'באיחור!' : t.dueIn === 0 ? 'היום' : `בעוד ${t.dueIn} ימים`;
                 return `
-                    <div class="popover-notif" onclick="jumpToTask(${t.projectId}, ${t.id})">
+                    <div class="popover-notif" data-action="jumpToTask(${t.projectId}, ${t.id})">
                         <div class="notif-title">${t.title}</div>
                         <div class="notif-meta">${proj ? proj.name : ''} · ${urgency}</div>
                     </div>
@@ -2395,12 +2395,12 @@ function openSettingsMenu(anchor) {
     pop.innerHTML = `
         <div class="popover-title">הגדרות</div>
         <div class="popover-menu">
-            <button class="popover-menu-item" type="button" onclick="exportData()">${ICONS.export} ייצא JSON</button>
-            <button class="popover-menu-item" type="button" onclick="document.getElementById('importFile').click()">${ICONS.import} ייבא JSON</button>
-            <button class="popover-menu-item" type="button" onclick="showBackupInfo()">${ICONS.save} פרטי גיבוי</button>
-            <button class="popover-menu-item" type="button" onclick="openManageTypesModal()">${ICONS.tag} ניהול סוגי משימות</button>
-            <button class="popover-menu-item" type="button" ${fsDisabled ? 'disabled title="תכונה זו זמינה רק ב-Chrome/Edge"' : ''} onclick="FSSync.connect()">${ICONS.save} ${fsLabel}</button>
-            <button class="popover-menu-item danger" type="button" onclick="clearAllData()">${ICONS.trash} נקה את כל הנתונים</button>
+            <button class="popover-menu-item" type="button" data-action="exportData()">${ICONS.export} ייצא JSON</button>
+            <button class="popover-menu-item" type="button" data-action="importData()">${ICONS.import} ייבא JSON</button>
+            <button class="popover-menu-item" type="button" data-action="showBackupInfo()">${ICONS.save} פרטי גיבוי</button>
+            <button class="popover-menu-item" type="button" data-action="openManageTypesModal()">${ICONS.tag} ניהול סוגי משימות</button>
+            <button class="popover-menu-item" type="button" ${fsDisabled ? 'disabled title="תכונה זו זמינה רק ב-Chrome/Edge"' : ''} data-action="FSSync.connect()">${ICONS.save} ${fsLabel}</button>
+            <button class="popover-menu-item danger" type="button" data-action="clearAllData()">${ICONS.trash} נקה את כל הנתונים</button>
         </div>
     `;
     positionPopover(pop, anchor);
@@ -2427,11 +2427,11 @@ function openUserMenu(anchor) {
             <div class="stat"><div class="stat-num">${done}</div><div class="stat-label">הושלמו</div></div>
         </div>
         <div class="popover-menu">
-            <button class="popover-menu-item" type="button" onclick="openUserProfileModal()">👤 ערוך פרופיל</button>
-            <button class="popover-menu-item" type="button" onclick="exportData()">📥 ייצא נתונים</button>
-            <button class="popover-menu-item" type="button" onclick="showBackupInfo()">💾 פרטי גיבוי</button>
-            <button class="popover-menu-item" type="button" onclick="exportData()">${ICONS.export} ייצא נתונים</button>
-            <button class="popover-menu-item" type="button" onclick="showBackupInfo()">${ICONS.save} פרטי גיבוי</button>
+            <button class="popover-menu-item" type="button" data-action="openUserProfileModal()">👤 ערוך פרופיל</button>
+            <button class="popover-menu-item" type="button" data-action="exportData()">📥 ייצא נתונים</button>
+            <button class="popover-menu-item" type="button" data-action="showBackupInfo()">💾 פרטי גיבוי</button>
+            <button class="popover-menu-item" type="button" data-action="exportData()">${ICONS.export} ייצא נתונים</button>
+            <button class="popover-menu-item" type="button" data-action="showBackupInfo()">${ICONS.save} פרטי גיבוי</button>
         </div>
     `;
     positionPopover(pop, anchor);
@@ -2502,10 +2502,10 @@ function openManageTypesModal() {
     overlay.className = 'modal-overlay';
     overlay.id = 'manageTypesModal';
     overlay.innerHTML = `
-        <div class="modal" onclick="event.stopPropagation()" style="max-width:440px;">
+        <div class="modal" data-action="event.stopPropagation()" style="max-width:440px;">
             <div class="modal-header">
                 <h2 class="modal-title">ניהול סוגי משימות</h2>
-                <button class="modal-close" type="button" aria-label="סגור" onclick="closeManageTypesModal()">×</button>
+                <button class="modal-close" type="button" aria-label="סגור" data-action="closeManageTypesModal()">×</button>
             </div>
             <div class="modal-body">
                 <div id="typesList"></div>
@@ -2521,7 +2521,7 @@ function openManageTypesModal() {
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn-primary" type="button" onclick="closeManageTypesModal()">סגור</button>
+                <button class="btn-primary" type="button" data-action="closeManageTypesModal()">סגור</button>
             </div>
         </div>
     `;
@@ -2780,3 +2780,10 @@ window.closeSearchPage = closeSearchPage;
 window.setSearchFilter = setSearchFilter;
 window.clearSearchFilters = clearSearchFilters;
 window.openEditModalForTask = openEditModalForTask;
+window.openSearchPage = openSearchPage;
+// Triggers the hidden <input type="file"> used for JSON import. Replaces the
+// former inline onclick="document.getElementById('importFile').click()".
+window.importData = function importData() {
+    const el = document.getElementById('importFile');
+    if (el) el.click();
+};
