@@ -729,13 +729,20 @@ input {
     opacity: 0.7;
 }
 
+/* File upload row */
+.file-upload-row {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+}
+
 /* File picker button */
 .file-picker-btn {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 6px;
-    width: 100%;
+    flex: 1;
     padding: 8px 12px;
     border: 1px solid var(--line);
     background: var(--surface);
@@ -750,6 +757,30 @@ input {
 .file-picker-btn:hover {
     background: var(--bg);
     border-color: var(--line-h);
+}
+
+/* File help button (question mark) */
+.file-help-btn {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    border-radius: 50%;
+    color: var(--ink-s);
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+
+.file-help-btn:hover {
+    background: var(--blue-bg);
+    border-color: var(--blue);
+    color: var(--blue-d);
 }
 
 /* File selected display */

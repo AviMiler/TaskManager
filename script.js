@@ -801,10 +801,14 @@ function openLinkModal(projectId, linkId) {
                     <div id="linkInputContainer">
                         <input type="text" id="linkUrl" class="field-input" value="${link && linkType === 'http' ? link.url : ''}" placeholder="https://..." style="display: ${linkType === 'http' ? 'block' : 'none'}">
                         <div style="display: ${linkType === 'file' ? 'block' : 'none'}">
-                            <button type="button" id="filePickerBtn" class="file-picker-btn">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
-                                איך מעתיקים נתיב קובץ?
-                            </button>
+                            <div class="file-upload-row">
+                                <button type="button" id="filePickerBtn" class="file-picker-btn">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                    העלאה
+                                </button>
+                                <button type="button" id="fileHelpBtn" class="file-help-btn" aria-label="עזרה" title="איך מעתיקים נתיב?">?</button>
+                            </div>
+                            <input type="file" id="linkFileInput" style="display:none;">
                             <input type="text" id="linkFileUrl" class="field-input" value="${linkType === 'file' && link ? link.url : ''}" placeholder="הדבק כאן את הנתיב המלא" style="margin-top: 8px; direction: ltr; text-align: left;">
                         </div>
                     </div>
@@ -845,17 +849,36 @@ function openLinkModal(projectId, linkId) {
         });
     });
 
-    // Show instructions for copying file path
+    // Upload button - opens file picker, fills name into URL field
     const filePickerBtn = overlay.querySelector('#filePickerBtn');
-    if (filePickerBtn) {
+    const fileInput = overlay.querySelector('#linkFileInput');
+    const fileUrlInput = overlay.querySelector('#linkFileUrl');
+
+    if (filePickerBtn && fileInput) {
         filePickerBtn.addEventListener('click', (e) => {
             e.preventDefault();
-            showAlert('כדי להעתיק נתיב מלא של קובץ:\n\n1. פתח את סייר הקבצים של Windows\n2. נווט לקובץ הרצוי\n3. לחץ Shift + לחיצה ימנית על הקובץ\n4. בחר "העתק כנתיב" (Copy as path)\n5. הדבק כאן (Ctrl+V)');
+            fileInput.click();
+        });
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                fileUrlInput.value = 'file:///' + file.name;
+                fileUrlInput.focus();
+                fileUrlInput.select();
+            }
+        });
+    }
+
+    // Help button - shows instructions for full path
+    const fileHelpBtn = overlay.querySelector('#fileHelpBtn');
+    if (fileHelpBtn) {
+        fileHelpBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            showAlert('כדי לקבל נתיב מלא לקובץ:\n\n1. פתח את סייר הקבצים של Windows\n2. נווט לקובץ הרצוי\n3. לחץ Shift + לחיצה ימנית על הקובץ\n4. בחר "העתק כנתיב" (Copy as path)\n5. הדבק כאן (Ctrl+V) - המרכאות יוסרו אוטומטית');
         });
     }
 
     // Auto-strip quotes and clean path on input
-    const fileUrlInput = overlay.querySelector('#linkFileUrl');
     if (fileUrlInput) {
         fileUrlInput.addEventListener('input', () => {
             const cleaned = fileUrlInput.value.replace(/^["']+|["']+$/g, '').trim();
