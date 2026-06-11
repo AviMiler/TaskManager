@@ -318,3 +318,8 @@ const FSSync = {
         }
     }
 };
+
+// Expose on window so the `if (window.FSSync)` guards and inline
+// onclick="FSSync.connect()" handlers resolve it (a top-level `const` is a
+// global lexical binding, not a property of window).
+window.FSSync = FSSync;

@@ -162,10 +162,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         openUserProfileModal();
     }
 
-    if (window.FSSync) {
-        await FSSync.init();
-        renderSyncStatusUI();
-    }
+    await store.init();
+    if (window.FSSync) renderSyncStatusUI();
 });
 
 function migrateTaskOwnership() {
@@ -510,15 +508,10 @@ async function addProject(name) {
         return;
     }
 
-    const project = {
-        id: newUniqueId(projects.map(p => p.id)),
+    const project = await store.projects.create({
         name: escapeHtml(name),
-        hueIdx: projects.length % HUES.length,
-        createdAt: new Date().toISOString()
-    };
-
-    projects.push(project);
-    saveProjects(projects);
+        hueIdx: projects.length % HUES.length
+    });
     loadProjects();
     document.getElementById('newProjectInput').value = '';
 
@@ -1147,10 +1140,8 @@ async function addTask(data) {
         return;
     }
 
-    const tasks = getAllTasks();
-    const user = getUser();
-    const task = {
-        id: newUniqueId(tasks.map(t => t.id)),
+    // UI owns validation + escaping; the store assigns id/timestamps/owner.
+    await store.tasks.create({
         projectId: currentProjectId,
         title: escapeHtml(data.title.trim()),
         description: escapeHtml((data.description || '').trim()),
@@ -1160,67 +1151,56 @@ async function addTask(data) {
         assignee: escapeHtml((data.assignee || '').trim()),
         due: escapeHtml((data.due || '').trim()),
         dueIn: data.dueIn !== undefined ? data.dueIn : null,
-        taskType: data.taskType || '',
-        comments: 0,
-        attachments: 0,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        createdBy: user.name,
-        createdById: user.id
-    };
-
-    tasks.push(task);
-    saveTasks(tasks);
+        taskType: data.taskType || ''
+    });
     loadProjects();
     rerenderCurrentView();
 }
 
-function updateTask(id, data) {
-    const tasks = getAllTasks();
-    const task = tasks.find(t => t.id === id);
-    if (!task) return;
-
-    if (data.title !== undefined) task.title = escapeHtml(data.title.trim());
-    if (data.description !== undefined) task.description = escapeHtml(data.description.trim());
-    if (data.state !== undefined) task.state = data.state;
-    if (data.priority !== undefined) task.priority = data.priority;
-    if (data.tag !== undefined) task.tag = escapeHtml(data.tag.trim());
-    if (data.assignee !== undefined) task.assignee = escapeHtml(data.assignee.trim());
+async function updateTask(id, data) {
+    // Build a partial patch of only the fields the caller supplied; the store
+    // applies it and bumps updatedAt.
+    const patch = {};
+    if (data.title !== undefined) patch.title = escapeHtml(data.title.trim());
+    if (data.description !== undefined) patch.description = escapeHtml(data.description.trim());
+    if (data.state !== undefined) patch.state = data.state;
+    if (data.priority !== undefined) patch.priority = data.priority;
+    if (data.tag !== undefined) patch.tag = escapeHtml(data.tag.trim());
+    if (data.assignee !== undefined) patch.assignee = escapeHtml(data.assignee.trim());
     if (data.due !== undefined) {
-        task.due = escapeHtml(data.due.trim());
-        task.dueIn = data.dueIn !== undefined ? data.dueIn : null;
+        patch.due = escapeHtml(data.due.trim());
+        patch.dueIn = data.dueIn !== undefined ? data.dueIn : null;
     }
-    if (data.taskType !== undefined) task.taskType = data.taskType;
-    task.updatedAt = new Date().toISOString();
-    saveTasks(tasks);
+    if (data.taskType !== undefined) patch.taskType = data.taskType;
+
+    const task = await store.tasks.update(id, patch);
+    if (!task) return;
     loadProjects();
     rerenderCurrentView();
 }
 
+// Cosmetic helper for the UI (greys out the delete button). Enforcement lives
+// in store.tasks.remove — this just reuses the same rule.
 function canDeleteTask(task) {
-    const user = getUser();
-    // Tasks created after the ownership migration carry a stable createdById;
-    // ownership is enforced against it so renaming yourself never changes it.
-    if (task.createdById) return task.createdById === user.id;
-    // Legacy tasks with no stable owner stay deletable by anyone (permissive
-    // fallback, matching the pre-migration behaviour on a shared file).
-    return !task.createdBy || task.createdBy === 'unknown' || task.createdBy === user.name;
+    return store.tasks.canDelete(task);
 }
 
 async function deleteTask(id, event) {
     if (event) event.stopPropagation();
-    const tasks = getAllTasks();
-    const task = tasks.find(t => t.id === id);
+    const task = await store.tasks.get(id);
     if (!task) return;
-    if (!canDeleteTask(task)) {
-        await showAlert('ניתן למחוק רק משימות שיצרת בעצמך');
-        return;
-    }
     const ok = await showConfirm('למחוק את המשימה?', 'מחיקת משימה', 'מחק', 'ביטול');
     if (!ok) return;
 
-    saveTasks(tasks.filter(t => t.id !== id));
-    if (window.FSSync) FSSync.recordTombstone(id);
+    try {
+        await store.tasks.remove(id);
+    } catch (e) {
+        if (e instanceof PermissionError) {
+            await showAlert('ניתן למחוק רק משימות שיצרת בעצמך');
+            return;
+        }
+        throw e;
+    }
     loadProjects();
     rerenderCurrentView();
     closeModal();
@@ -1644,9 +1624,9 @@ async function saveTaskFromModal(taskId) {
     };
 
     if (taskId === null || taskId === undefined) {
-        addTask(data);
+        await addTask(data);
     } else {
-        updateTask(taskId, data);
+        await updateTask(taskId, data);
     }
 
     closeModal();
