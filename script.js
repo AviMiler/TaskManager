@@ -659,7 +659,7 @@ function renderProjectDetails() {
 
     const links = Array.isArray(project.links) ? project.links : [];
     const linksHtml = links.map(l => `
-        <div class="project-link-btn" data-link-id="${l.id}" title="${l.url}">
+        <div class="project-link-btn" data-link-id="${l.id}" title="${l.url.startsWith('[#VSC#]') ? l.url.replace('[#VSC#]', '') : l.url}">
             <span class="project-link-icon">${renderLinkIcon(l.icon)}</span>
             <span class="project-link-name">${l.name}</span>
             <button class="project-link-edit" type="button" data-edit-link="${l.id}" aria-label="ערוך">✎</button>
@@ -703,7 +703,10 @@ function renderProjectDetails() {
             const id = el.dataset.linkId;
             const link = links.find(l => l.id === id);
             if (link && link.url) {
-                if (link.url.startsWith('file:')) {
+                if (link.url.startsWith('[#VSC#]')) {
+                    const path = link.url.replace('[#VSC#]', '').replace(/\\/g, '/');
+                    window.location.href = 'vscode://file/' + path;
+                } else if (link.url.startsWith('file:')) {
                     const blobFile = window._fileBlobs && window._fileBlobs[link.url];
                     if (blobFile) {
                         const blobUrl = URL.createObjectURL(blobFile);
@@ -766,8 +769,13 @@ function openLinkModal(projectId, linkId) {
     const links = Array.isArray(project.links) ? project.links : [];
     const link = linkId ? links.find(l => l.id === linkId) : null;
     const isNew = !link;
-    const linkType = link && link.url && link.url.startsWith('file:') ? 'file' : 'http';
-    const fileDisplayName = linkType === 'file' ? link.url.replace('file://', '') : '';
+    let linkType = 'http';
+    if (link && link.url) {
+        if (link.url.startsWith('[#VSC#]')) linkType = 'vsc';
+        else if (link.url.startsWith('file:')) linkType = 'file';
+    }
+    const fileUrlValue = linkType === 'file' && link ? link.url : '';
+    const vscPathValue = linkType === 'vsc' && link ? link.url.replace('[#VSC#]', '') : '';
 
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
@@ -794,13 +802,17 @@ function openLinkModal(projectId, linkId) {
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
                             File
                         </button>
+                        <button type="button" class="link-type-btn${linkType === 'vsc' ? ' active' : ''}" data-type="vsc" id="linkTypeVsc">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m8 16-4-4 4-4"/><path d="m16 8 4 4-4 4"/><path d="m13 5-2 14"/></svg>
+                            VSC
+                        </button>
                     </div>
                 </div>
                 <div class="field">
                     <label class="field-label">קישור *</label>
                     <div id="linkInputContainer">
                         <input type="text" id="linkUrl" class="field-input" value="${link && linkType === 'http' ? link.url : ''}" placeholder="https://..." style="display: ${linkType === 'http' ? 'block' : 'none'}">
-                        <div style="display: ${linkType === 'file' ? 'block' : 'none'}">
+                        <div id="fileInputWrap" style="display: ${linkType === 'file' ? 'block' : 'none'}">
                             <div class="file-upload-row">
                                 <button type="button" id="filePickerBtn" class="file-picker-btn">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
@@ -809,7 +821,18 @@ function openLinkModal(projectId, linkId) {
                                 <button type="button" id="fileHelpBtn" class="file-help-btn" aria-label="עזרה" title="איך מעתיקים נתיב?">?</button>
                             </div>
                             <input type="file" id="linkFileInput" style="display:none;">
-                            <input type="text" id="linkFileUrl" class="field-input" value="${linkType === 'file' && link ? link.url : ''}" placeholder="הדבק כאן את הנתיב המלא" style="margin-top: 8px; direction: ltr; text-align: left;">
+                            <input type="text" id="linkFileUrl" class="field-input" value="${fileUrlValue}" placeholder="הדבק כאן את הנתיב המלא" style="margin-top: 8px; direction: ltr; text-align: left;">
+                        </div>
+                        <div id="vscInputWrap" style="display: ${linkType === 'vsc' ? 'block' : 'none'}">
+                            <div class="file-upload-row">
+                                <button type="button" id="vscPickerBtn" class="file-picker-btn">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h5l2 2h9a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z"/></svg>
+                                    בחר תיקייה
+                                </button>
+                                <button type="button" id="vscHelpBtn" class="file-help-btn" aria-label="עזרה" title="איך מעתיקים נתיב?">?</button>
+                            </div>
+                            <input type="file" id="linkVscInput" webkitdirectory directory multiple style="display:none;">
+                            <input type="text" id="linkVscPath" class="field-input" value="${vscPathValue}" placeholder="הדבק כאן את הנתיב המלא לתיקייה" style="margin-top: 8px; direction: ltr; text-align: left;">
                         </div>
                     </div>
                 </div>
@@ -831,21 +854,18 @@ function openLinkModal(projectId, linkId) {
 
     // Link type selector
     const typeButtons = overlay.querySelectorAll('.link-type-btn');
+    const urlInput = overlay.querySelector('#linkUrl');
+    const fileInputWrap = overlay.querySelector('#fileInputWrap');
+    const vscInputWrap = overlay.querySelector('#vscInputWrap');
     typeButtons.forEach(btn => {
         btn.addEventListener('click', () => {
             const type = btn.dataset.type;
             typeButtons.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
 
-            const urlInput = overlay.querySelector('#linkUrl');
-            const fileInputDiv = overlay.querySelector('#linkInputContainer > div');
-            if (type === 'http') {
-                urlInput.style.display = 'block';
-                if (fileInputDiv) fileInputDiv.style.display = 'none';
-            } else {
-                urlInput.style.display = 'none';
-                if (fileInputDiv) fileInputDiv.style.display = 'block';
-            }
+            urlInput.style.display = type === 'http' ? 'block' : 'none';
+            fileInputWrap.style.display = type === 'file' ? 'block' : 'none';
+            vscInputWrap.style.display = type === 'vsc' ? 'block' : 'none';
         });
     });
 
@@ -884,6 +904,46 @@ function openLinkModal(projectId, linkId) {
             const cleaned = fileUrlInput.value.replace(/^["']+|["']+$/g, '').trim();
             if (cleaned !== fileUrlInput.value) {
                 fileUrlInput.value = cleaned;
+            }
+        });
+    }
+
+    // VSC folder picker - opens directory picker, fills folder name into path field
+    const vscPickerBtn = overlay.querySelector('#vscPickerBtn');
+    const vscInput = overlay.querySelector('#linkVscInput');
+    const vscPathInput = overlay.querySelector('#linkVscPath');
+
+    if (vscPickerBtn && vscInput) {
+        vscPickerBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            vscInput.click();
+        });
+        vscInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file && file.webkitRelativePath) {
+                const folderName = file.webkitRelativePath.split('/')[0];
+                vscPathInput.value = folderName;
+                vscPathInput.focus();
+                vscPathInput.select();
+            }
+        });
+    }
+
+    // VSC help button
+    const vscHelpBtn = overlay.querySelector('#vscHelpBtn');
+    if (vscHelpBtn) {
+        vscHelpBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            showAlert('כדי לקבל נתיב מלא לתיקייה:\n\n1. פתח את סייר הקבצים של Windows\n2. נווט לתיקייה הרצויה\n3. לחץ Shift + לחיצה ימנית על התיקייה\n4. בחר "העתק כנתיב" (Copy as path)\n5. הדבק כאן (Ctrl+V) - המרכאות יוסרו אוטומטית\n\nהקישור ייפתח בתיקייה ב-VS Code');
+        });
+    }
+
+    // Auto-strip quotes and clean path on input
+    if (vscPathInput) {
+        vscPathInput.addEventListener('input', () => {
+            const cleaned = vscPathInput.value.replace(/^["']+|["']+$/g, '').trim();
+            if (cleaned !== vscPathInput.value) {
+                vscPathInput.value = cleaned;
             }
         });
     }
@@ -938,6 +998,12 @@ async function saveLinkFromModal(projectId, linkId) {
         if (!url.startsWith('file:')) {
             url = 'file:///' + url.replace(/\\/g, '/').replace(/^\/+/, '');
         }
+    } else if (linkType === 'vsc') {
+        const vscPathInput = document.getElementById('linkVscPath');
+        let path = vscPathInput ? vscPathInput.value.trim() : '';
+        path = path.replace(/^["']+|["']+$/g, '').trim();
+        if (!path) { await showAlert('הכנס נתיב תיקייה'); return; }
+        url = '[#VSC#]' + path;
     }
 
     if (linkId) {
