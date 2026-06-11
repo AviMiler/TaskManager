@@ -132,12 +132,9 @@
         </div>
     </div>
 
-    <script>
-        // Backend selection for the data layer. 'local' = shared JSON file via
-        // the File System Access API (today). Switch to a server later with:
-        //   window.APP_CONFIG = { backend: 'http', apiBaseUrl: '/api' };
-        window.APP_CONFIG = { backend: 'local' };
-    </script>
+    <!-- APP_CONFIG moved to an external file: Manifest V3 extension pages
+         disallow inline <script> blocks under the default CSP. -->
+    <script src="config.js"></script>
     <script src="store/ids.js"></script>
     <script src="store/Store.js"></script>
     <script src="store/LocalJsonStore.js"></script>
@@ -145,5 +142,7 @@
     <script src="store/index.js"></script>
     <script src="fsSync.js"></script>
     <script src="script.js"></script>
+    <!-- CSP-safe replacement for inline onclick="" handlers (see actions.js). -->
+    <script src="actions.js"></script>
 </body>
 </html>
