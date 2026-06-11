@@ -801,8 +801,11 @@ function openLinkModal(projectId, linkId) {
                     <div id="linkInputContainer">
                         <input type="text" id="linkUrl" class="field-input" value="${link && linkType === 'http' ? link.url : ''}" placeholder="https://..." style="display: ${linkType === 'http' ? 'block' : 'none'}">
                         <div style="display: ${linkType === 'file' ? 'block' : 'none'}">
-                            <input type="text" id="linkFileUrl" class="field-input" value="${linkType === 'file' && link ? link.url : ''}" placeholder="file:///C:/path/to/file.pdf" style="direction: ltr; text-align: left;">
-                            <div class="field-hint">העתק את הנתיב המלא: סייר Windows → Shift+לחיצה ימנית על הקובץ → "העתק כנתיב"</div>
+                            <button type="button" id="filePickerBtn" class="file-picker-btn">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
+                                איך מעתיקים נתיב קובץ?
+                            </button>
+                            <input type="text" id="linkFileUrl" class="field-input" value="${linkType === 'file' && link ? link.url : ''}" placeholder="הדבק כאן את הנתיב המלא" style="margin-top: 8px; direction: ltr; text-align: left;">
                         </div>
                     </div>
                 </div>
@@ -842,6 +845,25 @@ function openLinkModal(projectId, linkId) {
         });
     });
 
+    // Show instructions for copying file path
+    const filePickerBtn = overlay.querySelector('#filePickerBtn');
+    if (filePickerBtn) {
+        filePickerBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            showAlert('כדי להעתיק נתיב מלא של קובץ:\n\n1. פתח את סייר הקבצים של Windows\n2. נווט לקובץ הרצוי\n3. לחץ Shift + לחיצה ימנית על הקובץ\n4. בחר "העתק כנתיב" (Copy as path)\n5. הדבק כאן (Ctrl+V)');
+        });
+    }
+
+    // Auto-strip quotes and clean path on input
+    const fileUrlInput = overlay.querySelector('#linkFileUrl');
+    if (fileUrlInput) {
+        fileUrlInput.addEventListener('input', () => {
+            const cleaned = fileUrlInput.value.replace(/^["']+|["']+$/g, '').trim();
+            if (cleaned !== fileUrlInput.value) {
+                fileUrlInput.value = cleaned;
+            }
+        });
+    }
 
     overlay.querySelectorAll('.link-icon-opt').forEach(b => {
         b.addEventListener('click', () => {
@@ -888,6 +910,7 @@ async function saveLinkFromModal(projectId, linkId) {
     } else if (linkType === 'file') {
         const fileUrlInput = document.getElementById('linkFileUrl');
         url = fileUrlInput ? fileUrlInput.value.trim() : '';
+        url = url.replace(/^["']+|["']+$/g, '').trim();
         if (!url) { await showAlert('הכנס נתיב קובץ'); return; }
         if (!url.startsWith('file:')) {
             url = 'file:///' + url.replace(/\\/g, '/').replace(/^\/+/, '');
