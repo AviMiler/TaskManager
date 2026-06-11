@@ -4,14 +4,17 @@
   <meta charset="utf-8">
   <title>FS Access API Test</title>
   <style>
-    body { font-family: sans-serif; width: 320px; padding: 12px; }
-    button { width: 100%; padding: 8px; font-size: 14px; cursor: pointer; }
+    body { font-family: sans-serif; width: 360px; padding: 12px; }
+    button { width: 100%; padding: 8px; font-size: 14px; cursor: pointer; margin-top: 6px; }
+    textarea { width: 100%; height: 160px; margin-top: 10px; font-family: monospace; font-size: 12px; box-sizing: border-box; }
     #status { margin-top: 10px; font-size: 13px; white-space: pre-wrap; }
     a { display: inline-block; margin-top: 10px; font-size: 12px; }
   </style>
 </head>
 <body>
-  <button id="pickBtn">Pick folder &amp; write test.json</button>
+  <button id="pickBtn">Pick folder &amp; load test.json</button>
+  <textarea id="jsonEditor" placeholder="JSON content will appear here once a folder is picked / loaded. You can edit it before saving."></textarea>
+  <button id="saveBtn">Save to test.json</button>
   <div id="status"></div>
   <a id="openTab" href="test.html" target="_blank">Open this page in a full tab</a>
   <script src="test.js"></script>
