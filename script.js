@@ -754,7 +754,8 @@ function openLinkModal(projectId, linkId) {
     const links = Array.isArray(project.links) ? project.links : [];
     const link = linkId ? links.find(l => l.id === linkId) : null;
     const isNew = !link;
-    const linkType = link && link.url && link.url.startsWith('/') ? 'file' : 'http';
+    const linkType = link && link.url && link.url.startsWith('file:') ? 'file' : 'http';
+    const fileDisplayName = linkType === 'file' ? link.url.replace('file://', '') : '';
 
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
@@ -786,8 +787,14 @@ function openLinkModal(projectId, linkId) {
                 <div class="field">
                     <label class="field-label">קישור *</label>
                     <div id="linkInputContainer">
-                        <input type="text" id="linkUrl" class="field-input" value="${link ? link.url : ''}" placeholder="https://..." style="display: ${linkType === 'http' ? 'block' : 'none'}">
-                        <input type="file" id="linkFile" class="field-input" style="display: ${linkType === 'file' ? 'block' : 'none'}" accept="*">
+                        <input type="text" id="linkUrl" class="field-input" value="${link && linkType === 'http' ? link.url : ''}" placeholder="https://..." style="display: ${linkType === 'http' ? 'block' : 'none'}">
+                        <div style="display: ${linkType === 'file' ? 'block' : 'none'}">
+                            <input type="file" id="linkFile" class="field-input" accept="*" style="margin-bottom: 8px;">
+                            <div id="fileDisplayName" class="file-selected-display" style="${fileDisplayName ? '' : 'display: none;'}">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
+                                <span>${fileDisplayName}</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="field">
@@ -815,16 +822,31 @@ function openLinkModal(projectId, linkId) {
             btn.classList.add('active');
 
             const urlInput = overlay.querySelector('#linkUrl');
-            const fileInput = overlay.querySelector('#linkFile');
+            const fileInputDiv = overlay.querySelector('#linkInputContainer > div');
             if (type === 'http') {
                 urlInput.style.display = 'block';
-                fileInput.style.display = 'none';
+                if (fileInputDiv) fileInputDiv.style.display = 'none';
             } else {
                 urlInput.style.display = 'none';
-                fileInput.style.display = 'block';
+                if (fileInputDiv) fileInputDiv.style.display = 'block';
             }
         });
     });
+
+    // File input change handler
+    const fileInput = overlay.querySelector('#linkFile');
+    if (fileInput) {
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            const displayDiv = overlay.querySelector('#fileDisplayName');
+            if (file) {
+                displayDiv.querySelector('span').textContent = file.name;
+                displayDiv.style.display = 'flex';
+            } else {
+                displayDiv.style.display = 'none';
+            }
+        });
+    }
 
     overlay.querySelectorAll('.link-icon-opt').forEach(b => {
         b.addEventListener('click', () => {
@@ -865,7 +887,7 @@ async function saveLinkFromModal(projectId, linkId) {
     } else if (linkType === 'file') {
         const file = fileInput.files[0];
         if (!file) { await showAlert('בחר קובץ'); return; }
-        url = '/' + file.name;
+        url = 'file://' + file.name;
     }
 
     const projects = getProjects();
