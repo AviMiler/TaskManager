@@ -849,7 +849,6 @@ function openLinkModal(projectId, linkId) {
             </div>
         </div>
     `;
-    overlay.onclick = () => closeLinkModal();
     document.body.appendChild(overlay);
 
     // Link type selector
