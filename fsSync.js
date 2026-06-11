@@ -240,7 +240,6 @@ const FSSync = {
         localStorage.setItem(DB.columns, JSON.stringify(mergeById(getColumns(), remote.columns || [])));
         localStorage.setItem(DB.taskTypes, JSON.stringify(mergeById(getTaskTypes(), remote.taskTypes || [])));
 
-        initNextTaskId();
         loadProjects();
         rerenderCurrentView();
         this.status = 'connected';
@@ -277,7 +276,6 @@ const FSSync = {
             localStorage.setItem(DB.projects, JSON.stringify(mergedProjects));
             localStorage.setItem(DB.columns, JSON.stringify(mergedColumns));
             localStorage.setItem(DB.taskTypes, JSON.stringify(mergedTypes));
-            initNextTaskId();
             loadProjects();
             rerenderCurrentView();
 

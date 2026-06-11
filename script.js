@@ -16,7 +16,6 @@ let currentProjectId = null;
 let editingTaskId = null;
 let draggingTaskId = null;
 let draggingColumnId = null;
-let nextTaskId = 1000;
 let currentView = 'kanban'; // 'kanban' | 'list'
 let listScope = 'current'; // 'current' | 'all'
 let activeFilters = { priority: null, tag: null, assignee: null };
@@ -153,7 +152,6 @@ function showPrompt(message, defaultValue = '', title) {
 
 // ===== Init =====
 document.addEventListener('DOMContentLoaded', async () => {
-    initNextTaskId();
     setupEventListeners();
     renderUserUI();
     migrateTaskOwnership();
@@ -178,13 +176,6 @@ function migrateTaskOwnership() {
         if (t.updatedAt === undefined) { t.updatedAt = t.createdAt || new Date().toISOString(); changed = true; }
     });
     if (changed) localStorage.setItem(DB.tasks, JSON.stringify(tasks));
-}
-
-function initNextTaskId() {
-    const all = getAllTasks();
-    if (all.length > 0) {
-        nextTaskId = Math.max(...all.map(t => t.id || 0)) + 1;
-    }
 }
 
 // ===== Storage =====
@@ -265,7 +256,7 @@ async function addColumn(name) {
         await showAlert('עמודה עם שם זה כבר קיימת');
         return;
     }
-    const id = 'col_' + Date.now();
+    const id = 'col_' + newId();
     columns.push({ id, name: safeName, hue: (columns.length * 47) % 360 });
     saveColumns(columns);
     renderKanban();
@@ -339,7 +330,7 @@ function upsertMyEntry(dailyId, fields) {
         Object.assign(entry, fields, { userHue: user.hue, updatedAt: now });
     } else {
         daily.entries.push({
-            id: Date.now(),
+            id: newId(),
             userName: user.name,
             userHue: user.hue,
             yesterday: '',
@@ -355,16 +346,17 @@ function upsertMyEntry(dailyId, fields) {
 
 function getUser() {
     const d = localStorage.getItem(DB.user);
-    if (!d) return { ...DEFAULT_USER };
+    if (!d) return { ...DEFAULT_USER, id: getClientId() };
     try {
         const u = JSON.parse(d);
         return {
+            id: getClientId(),
             name: u.name || DEFAULT_USER.name,
             role: u.role || DEFAULT_USER.role,
             hue: (u.hue !== undefined && u.hue !== null) ? u.hue : DEFAULT_USER.hue
         };
     } catch (e) {
-        return { ...DEFAULT_USER };
+        return { ...DEFAULT_USER, id: getClientId() };
     }
 }
 
@@ -519,7 +511,7 @@ async function addProject(name) {
     }
 
     const project = {
-        id: Date.now(),
+        id: newUniqueId(projects.map(p => p.id)),
         name: escapeHtml(name),
         hueIdx: projects.length % HUES.length,
         createdAt: new Date().toISOString()
@@ -1103,7 +1095,7 @@ async function saveLinkFromModal(projectId, linkId) {
         const l = project.links.find(x => x.id === linkId);
         if (l) { l.name = escapeHtml(name); l.url = url; l.icon = icon; }
     } else {
-        project.links.push({ id: 'link_' + Date.now(), name: escapeHtml(name), url, icon });
+        project.links.push({ id: 'link_' + newId(), name: escapeHtml(name), url, icon });
     }
 
     saveProjects(projects);
@@ -1155,8 +1147,10 @@ async function addTask(data) {
         return;
     }
 
+    const tasks = getAllTasks();
+    const user = getUser();
     const task = {
-        id: nextTaskId++,
+        id: newUniqueId(tasks.map(t => t.id)),
         projectId: currentProjectId,
         title: escapeHtml(data.title.trim()),
         description: escapeHtml((data.description || '').trim()),
@@ -1171,10 +1165,10 @@ async function addTask(data) {
         attachments: 0,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        createdBy: getUser().name
+        createdBy: user.name,
+        createdById: user.id
     };
 
-    const tasks = getAllTasks();
     tasks.push(task);
     saveTasks(tasks);
     loadProjects();
@@ -1205,6 +1199,11 @@ function updateTask(id, data) {
 
 function canDeleteTask(task) {
     const user = getUser();
+    // Tasks created after the ownership migration carry a stable createdById;
+    // ownership is enforced against it so renaming yourself never changes it.
+    if (task.createdById) return task.createdById === user.id;
+    // Legacy tasks with no stable owner stay deletable by anyone (permissive
+    // fallback, matching the pre-migration behaviour on a shared file).
     return !task.createdBy || task.createdBy === 'unknown' || task.createdBy === user.name;
 }
 
@@ -2572,7 +2571,7 @@ function openManageTypesModal() {
             await showAlert('סוג עם שם זה כבר קיים');
             return;
         }
-        types.push({ id: 'type_' + Date.now(), name, hue: selectedHue });
+        types.push({ id: 'type_' + newId(), name, hue: selectedHue });
         saveTaskTypes(types);
         nameInput.value = '';
         renderList(container);
