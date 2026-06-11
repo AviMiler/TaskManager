@@ -793,6 +793,7 @@ function openLinkModal(projectId, linkId) {
                             <div id="fileDisplayName" class="file-selected-display" style="${fileDisplayName ? '' : 'display: none;'}">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
                                 <span>${fileDisplayName}</span>
+                                <button type="button" class="file-clear-btn" aria-label="הסר קובץ">×</button>
                             </div>
                         </div>
                     </div>
@@ -835,16 +836,27 @@ function openLinkModal(projectId, linkId) {
 
     // File input change handler
     const fileInput = overlay.querySelector('#linkFile');
+    const displayDiv = overlay.querySelector('#fileDisplayName');
+
     if (fileInput) {
         fileInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
-            const displayDiv = overlay.querySelector('#fileDisplayName');
             if (file) {
                 displayDiv.querySelector('span').textContent = file.name;
                 displayDiv.style.display = 'flex';
             } else {
                 displayDiv.style.display = 'none';
             }
+        });
+    }
+
+    // Clear file button
+    const clearBtn = overlay.querySelector('.file-clear-btn');
+    if (clearBtn) {
+        clearBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            fileInput.value = '';
+            displayDiv.style.display = 'none';
         });
     }
 
@@ -869,6 +881,7 @@ async function saveLinkFromModal(projectId, linkId) {
     const name = document.getElementById('linkName').value.trim();
     const urlInput = document.getElementById('linkUrl');
     const fileInput = document.getElementById('linkFile');
+    const displayDiv = document.getElementById('fileDisplayName');
     const selected = document.querySelector('#linkIconPicker .link-icon-opt.selected');
     const icon = selected ? selected.dataset.icon : 'link';
 
@@ -878,6 +891,12 @@ async function saveLinkFromModal(projectId, linkId) {
     const activeTypeBtn = document.querySelector('.link-type-btn.active');
     const linkType = activeTypeBtn ? activeTypeBtn.dataset.type : 'http';
 
+    const projects = getProjects();
+    const project = projects.find(p => p.id === projectId);
+    if (!project) return;
+    if (!Array.isArray(project.links)) project.links = [];
+    const existingLink = linkId ? project.links.find(x => x.id === linkId) : null;
+
     if (linkType === 'http') {
         url = urlInput.value.trim();
         if (!url) { await showAlert('קישור חובה'); return; }
@@ -886,14 +905,15 @@ async function saveLinkFromModal(projectId, linkId) {
         }
     } else if (linkType === 'file') {
         const file = fileInput.files[0];
-        if (!file) { await showAlert('בחר קובץ'); return; }
-        url = 'file://' + file.name;
+        if (file) {
+            url = 'file://' + file.name;
+        } else if (existingLink && existingLink.url.startsWith('file:')) {
+            url = existingLink.url;
+        } else {
+            await showAlert('בחר קובץ');
+            return;
+        }
     }
-
-    const projects = getProjects();
-    const project = projects.find(p => p.id === projectId);
-    if (!project) return;
-    if (!Array.isArray(project.links)) project.links = [];
 
     if (linkId) {
         const l = project.links.find(x => x.id === linkId);
