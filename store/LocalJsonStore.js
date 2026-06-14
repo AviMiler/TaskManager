@@ -89,11 +89,12 @@ class LocalTaskStore {
     // Single source of truth for the ownership rule. The UI reuses this to
     // show/hide the delete button; the server will enforce the same rule as 403.
     canDelete(task, user = getUser()) {
-        if (String(task.assigneeId) === String(user.id)) return true;
-        if (task.assignee && task.assignee === user.name) return true;
-        if (task.createdById) return task.createdById === user.id;
-        // Legacy tasks with no stable owner stay deletable by anyone.
-        return !task.createdBy || task.createdBy === 'unknown' || task.createdBy === user.name;
+        if (task.assigneeId !== undefined && task.assigneeId !== null && task.assigneeId !== '') {
+            return String(task.assigneeId) === String(user.id);
+        }
+        if (task.assignee) return task.assignee === user.name;
+        // Tasks with no assignee stay deletable by anyone.
+        return true;
     }
 }
 
