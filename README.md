@@ -85,7 +85,34 @@ python3 -m http.server 8000
 TaskManager/
 ├── index.html      # האפליקציה
 ├── style.css       # עיצוב (Design tokens)
-├── script.js       # לוגיקה (Kanban + CRUD)
+├── config.js       # בחירת backend לשכבת הנתונים
+├── fsSync.js       # סנכרון קובץ משותף (File System Access API)
+├── actions.js      # דיספצ'ר פעולות תואם-CSP (במקום onclick מוטבע)
+├── store/          # שכבת גישה לנתונים (Store) — local/http
+│   ├── ids.js
+│   ├── Store.js
+│   ├── LocalJsonStore.js
+│   ├── HttpStore.js
+│   └── index.js
+├── js/             # לוגיקת האפליקציה (פוצלה מ-script.js המונוליטי)
+│   ├── state.js    # קבועים ומצב גלובלי
+│   ├── utils.js    # escapeHtml / initials / ...
+│   ├── dialogs.js  # דיאלוגים מותאמים (alert/confirm/prompt)
+│   ├── storage.js  # קריאה/כתיבה ל-localStorage + עמודות
+│   ├── user.js     # פרופיל משתמש + סטטוס סנכרון
+│   ├── projects.js # פרויקטים
+│   ├── links.js    # קישורי פרויקט
+│   ├── tasks.js    # CRUD משימות
+│   ├── kanban.js   # רינדור לוח + Drag & Drop
+│   ├── modal.js    # מודאל עריכת משימה
+│   ├── daily.js    # דיילי (standup)
+│   ├── search.js   # חיפוש
+│   ├── filters.js  # סינון + מיון
+│   ├── ui.js       # מעבר תצוגות + רשימה
+│   ├── menus.js    # תפריטים + ניהול סוגים
+│   ├── settings.js # ייצוא/ייבוא/גיבוי
+│   ├── events.js   # אתחול + מאזיני אירועים
+│   └── globals.js  # חשיפת פונקציות ל-window
 └── README.md
 ```
 
