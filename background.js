@@ -6,3 +6,13 @@
 chrome.action.onClicked.addListener(() => {
     chrome.tabs.create({ url: chrome.runtime.getURL('index.html') });
 });
+
+// Open a local file:// link. Page context can't navigate to file:// (blocked),
+// but the service worker can via chrome.tabs.create (requires the "tabs"
+// permission, "file:///*" host permission, and the user enabling
+// "Allow access to file URLs" on the extension's details page).
+chrome.runtime.onMessage.addListener((msg) => {
+    if (msg && msg.type === 'openLocalFile' && msg.url) {
+        chrome.tabs.create({ url: msg.url });
+    }
+});
