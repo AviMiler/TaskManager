@@ -100,8 +100,7 @@ function renderDailyTable(daily, forMe) {
     if (forMe) {
         const myEntry = daily.entries.find(e => e.userName === user.name) ||
             { userName: user.name, userHue: user.hue, yesterday: '', today: '', blocked: '' };
-        const hasContent = !!(myEntry.yesterday || myEntry.today || myEntry.blocked);
-        rows += dailyRowHtml(myEntry, { editable: !hasContent, isMe: true });
+        rows += dailyRowHtml(myEntry, { editable: false, isMe: true });
         daily.entries.filter(e => e.userName !== user.name).forEach(e => rows += dailyRowHtml(e));
     } else {
         daily.entries.forEach(e => rows += dailyRowHtml(e));
