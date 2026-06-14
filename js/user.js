@@ -36,7 +36,15 @@ function isMine(item, { includeAssignee = false } = {}) {
     if (!item) return false;
     const me = getUser();
     if (Array.isArray(item.memberIds)) {
-        return item.memberIds.map(String).includes(String(me.id));
+        // A project belongs to me when I'm in its member list. The owner and
+        // creator always count as implicit members so they never lose sight
+        // of their own project even if not listed explicitly.
+        if (item.memberIds.map(String).includes(String(me.id))) return true;
+        if (item.ownerId !== undefined && item.ownerId !== null && item.ownerId !== '') {
+            if (String(item.ownerId) === String(me.id)) return true;
+        }
+        if (item.createdById && String(item.createdById) === String(me.id)) return true;
+        return false;
     }
     if (item.ownerId !== undefined && item.ownerId !== null && item.ownerId !== '') {
         return String(item.ownerId) === String(me.id);

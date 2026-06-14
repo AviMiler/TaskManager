@@ -264,7 +264,7 @@ function loadProjects() {
 
     if (projects.length === 0) {
         const msg = showMineOnly && allProjects.length
-            ? 'אין פרויקטים שיצרת — בטל את "הצג רק שלי" כדי לראות הכל'
+            ? 'אינך חבר באף פרויקט — בטל את "הצג רק שלי" כדי לראות הכל'
             : 'אין פרויקטים עדיין';
         list.innerHTML = `<div style="padding: 12px; text-align: center; color: var(--ink-f); font-size: 12px;">${msg}</div>`;
     } else {
