@@ -24,6 +24,7 @@ let activeSort = 'created-desc'; // 'created-desc' | 'created-asc' | 'priority' 
 let searchPageTerm = null;
 let searchPageFilters = { projectId: null, priority: null, state: null };
 let showMineOnly = localStorage.getItem(DB.mineOnly) === '1';
+let mandatoryProfileOpen = false;
 
 // Hue palette for project dots
 const HUES = [230, 160, 40, 290, 0, 60, 120, 180, 260, 320];
@@ -161,7 +162,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     restoreCurrentProject();
 
     if (!localStorage.getItem(DB.user)) {
-        openUserProfileModal();
+        openUserProfileModal(true);
     }
 
     await store.init();
@@ -406,6 +407,17 @@ function renderUserUI() {
     const u = getUser();
     const ini = initials(u.name) || u.name.substring(0, 2);
 
+    // Topbar user chip (avatar + name + role)
+    const chipAvatar = document.getElementById('topUserAvatar');
+    if (chipAvatar) {
+        chipAvatar.style.setProperty('--hue', u.hue);
+        chipAvatar.textContent = ini;
+    }
+    const chipName = document.getElementById('topUserName');
+    if (chipName) chipName.textContent = u.name;
+    const chipRole = document.getElementById('topUserRole');
+    if (chipRole) chipRole.textContent = u.role || '';
+
     const topAvatar = document.querySelector('.topbar > .avatar');
     if (topAvatar) {
         topAvatar.style.setProperty('--hue', u.hue);
@@ -446,9 +458,10 @@ function renderSyncStatusUI() {
     dot.title = FSSync.getStatusLabel();
 }
 
-function openUserProfileModal() {
+function openUserProfileModal(mandatory = false) {
     closePopovers();
     const u = getUser();
+    mandatoryProfileOpen = !!mandatory;
 
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
@@ -457,8 +470,9 @@ function openUserProfileModal() {
         <div class="modal" data-action="event.stopPropagation()">
             <div class="modal-header">
                 <h2 class="modal-title">פרטי המשתמש</h2>
-                <button class="modal-close" type="button" aria-label="סגור" data-action="closeModal()">×</button>
+                ${mandatory ? '' : '<button class="modal-close" type="button" aria-label="סגור" data-action="closeModal()">×</button>'}
             </div>
+            ${mandatory ? '<div class="modal-intro">ברוך הבא! הזן שם כדי שהמשימות והפרויקטים שתיצור ישויכו אליך.</div>' : ''}
             <div class="modal-body">
                 <div class="field">
                     <label class="field-label">שם מלא *</label>
@@ -481,12 +495,16 @@ function openUserProfileModal() {
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn-secondary" type="button" data-action="closeModal()">ביטול</button>
+                ${mandatory ? '' : '<button class="btn-secondary" type="button" data-action="closeModal()">ביטול</button>'}
                 <button class="btn-primary" type="button" data-action="saveUserFromModal()">שמור</button>
             </div>
         </div>
     `;
-    overlay.addEventListener("click", (e) => { if (e.target === overlay) closeModal(); });
+    // Only allow dismiss-by-backdrop when the profile already exists. The
+    // first-time setup is mandatory so a stray click can't discard it.
+    if (!mandatory) {
+        overlay.addEventListener("click", (e) => { if (e.target === overlay) closeModal(); });
+    }
     document.body.appendChild(overlay);
 
     const nameInput = overlay.querySelector('#userName');
@@ -521,6 +539,7 @@ function saveUserFromModal() {
     const role = document.getElementById('userRole').value.trim();
     const hue = parseInt(document.getElementById('userHue').value, 10) || 0;
     saveUser({ name, role, hue });
+    mandatoryProfileOpen = false;
     closeModal();
 }
 
@@ -2753,7 +2772,7 @@ function setupEventListeners() {
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             const m = document.getElementById('taskModal');
-            if (m) { closeModal(); return; }
+            if (m) { if (!mandatoryProfileOpen) closeModal(); return; }
             const dm = document.getElementById('dailyModal');
             if (dm) { closeDailyModal(); return; }
             const sp = document.getElementById('searchPage');
