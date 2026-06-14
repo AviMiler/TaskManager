@@ -448,7 +448,7 @@ function openUserProfileModal() {
             </div>
         </div>
     `;
-    overlay.onclick = () => closeModal();
+    overlay.addEventListener("click", (e) => { if (e.target === overlay) closeModal(); });
     document.body.appendChild(overlay);
 
     const nameInput = overlay.querySelector('#userName');
@@ -587,7 +587,7 @@ function openProjectSettings(id, event) {
         </div>
     `;
 
-    overlay.onclick = () => closeProjectSettings();
+    overlay.addEventListener("click", (e) => { if (e.target === overlay) closeProjectSettings(); });
     document.body.appendChild(overlay);
 
     // Wire up color swatch clicks
@@ -1571,7 +1571,7 @@ function buildModal(task, isNew, defaultColumnId) {
         </div>
     `;
 
-    overlay.onclick = () => closeModal();
+    overlay.addEventListener("click", (e) => { if (e.target === overlay) closeModal(); });
 
     return overlay;
 }
@@ -1719,7 +1719,7 @@ function openDailyModal() {
         </div>
     `;
     document.body.appendChild(overlay);
-    overlay.onclick = () => closeDailyModal();
+    overlay.addEventListener("click", (e) => { if (e.target === overlay) closeDailyModal(); });
 
     bindDailyEditableInputs(overlay, today.id);
     renderDailyHistory();
@@ -2528,7 +2528,7 @@ function openManageTypesModal() {
         </div>
     `;
 
-    overlay.onclick = () => closeManageTypesModal();
+    overlay.addEventListener("click", (e) => { if (e.target === overlay) closeManageTypesModal(); });
     document.body.appendChild(overlay);
 
     const container = overlay.querySelector('#typesList');
