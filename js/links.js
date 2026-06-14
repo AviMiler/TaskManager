@@ -276,6 +276,10 @@ async function saveLinkFromModal(projectId, linkId) {
         project.links.push({ id: 'link_' + newId(), name: escapeHtml(name), url, icon });
     }
 
+    // Bump the timestamp so file-sync's merge-by-updatedAt keeps this edit
+    // instead of letting an older remote copy overwrite it on the next pull.
+    project.updatedAt = new Date().toISOString();
+
     saveProjects(projects);
     closeLinkModal();
     renderProjectDetails();
@@ -286,6 +290,7 @@ function deleteLink(projectId, linkId) {
     const project = projects.find(p => p.id === projectId);
     if (!project || !Array.isArray(project.links)) return;
     project.links = project.links.filter(l => l.id !== linkId);
+    project.updatedAt = new Date().toISOString();
     saveProjects(projects);
     renderProjectDetails();
 }
