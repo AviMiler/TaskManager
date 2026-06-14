@@ -88,6 +88,20 @@ function mergeTombstones(a, b) {
     return Array.from(map.values()).filter(t => new Date(t.deletedAt).getTime() > cutoff);
 }
 
+// Dailies are keyed by date (`id`), but the interesting per-user data lives in
+// each day's `entries` array. Merge day-by-day, then merge each day's entries
+// by entry `id` (mergeById uses each entry's own updatedAt).
+function mergeDailies(base, other) {
+    const map = new Map();
+    base.forEach(d => map.set(d.id, { ...d, entries: (d.entries || []).slice() }));
+    other.forEach(d => {
+        const existing = map.get(d.id);
+        if (!existing) { map.set(d.id, { ...d, entries: (d.entries || []).slice() }); return; }
+        existing.entries = mergeById(existing.entries, d.entries || []);
+    });
+    return Array.from(map.values());
+}
+
 const FSSync = {
     fileHandle: null,
     status: 'disconnected', // 'disconnected' | 'connected' | 'unsupported' | 'error'
@@ -344,9 +358,11 @@ const FSSync = {
         localStorage.setItem(DB.columns, JSON.stringify(mergeById(getColumns(), remote.columns || [])));
         localStorage.setItem(DB.taskTypes, JSON.stringify(mergeById(getTaskTypes(), remote.taskTypes || [])));
         localStorage.setItem(DB.members, JSON.stringify(mergeById(getMembers(), remote.members || [], memberTombstones)));
+        localStorage.setItem(DB.dailies, JSON.stringify(mergeDailies(getDailies(), remote.dailies || [])));
 
         loadProjects();
         rerenderCurrentView();
+        refreshDailyModalIfOpen();
         this.status = 'connected';
         renderSyncStatusUI();
     },
@@ -370,6 +386,7 @@ const FSSync = {
                 const mergedColumns = mergeById(remote.columns || [], getColumns());
                 const mergedTypes = mergeById(remote.taskTypes || [], getTaskTypes());
                 const mergedMembers = mergeById(remote.members || [], getMembers(), memberTombstones);
+                const mergedDailies = mergeDailies(remote.dailies || [], getDailies());
 
                 // Optimistic-concurrency guard: re-read right before writing.
                 // If another client advanced `generation` since we read, redo
@@ -393,6 +410,7 @@ const FSSync = {
                     columns: mergedColumns,
                     taskTypes: mergedTypes,
                     members: mergedMembers,
+                    dailies: mergedDailies,
                     tombstones,
                     memberTombstones,
                     lastModified: new Date().toISOString(),
@@ -400,7 +418,7 @@ const FSSync = {
                     lastModifiedById: getUser().id
                 });
 
-                merged = { mergedTasks, mergedProjects, mergedColumns, mergedTypes, mergedMembers };
+                merged = { mergedTasks, mergedProjects, mergedColumns, mergedTypes, mergedMembers, mergedDailies };
                 break;
             }
 
@@ -413,8 +431,10 @@ const FSSync = {
                 localStorage.setItem(DB.columns, JSON.stringify(merged.mergedColumns));
                 localStorage.setItem(DB.taskTypes, JSON.stringify(merged.mergedTypes));
                 localStorage.setItem(DB.members, JSON.stringify(merged.mergedMembers));
+                localStorage.setItem(DB.dailies, JSON.stringify(merged.mergedDailies));
                 loadProjects();
                 rerenderCurrentView();
+                refreshDailyModalIfOpen();
             }
 
             this.status = 'connected';

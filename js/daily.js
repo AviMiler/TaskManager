@@ -186,3 +186,21 @@ function closeDailyModal() {
     const m = document.getElementById('dailyModal');
     if (m) m.remove();
 }
+
+// Re-render the open daily modal in place after a sync pulls in changes
+// from other team members. Leaves the user's own (editable) row untouched
+// so an in-progress, not-yet-blurred edit isn't clobbered.
+function refreshDailyModalIfOpen() {
+    const overlay = document.getElementById('dailyModal');
+    if (!overlay) return;
+    const today = getOrCreateTodayDaily();
+    const user = getUser();
+
+    const table = overlay.querySelector('.daily-table');
+    if (table) {
+        const others = today.entries.filter(e => e.userName !== user.name);
+        table.querySelectorAll('.daily-table-row:not(.daily-table-row-head):not(.daily-table-row-me)').forEach(r => r.remove());
+        table.insertAdjacentHTML('beforeend', others.map(e => dailyRowHtml(e, false)).join(''));
+    }
+    renderDailyHistory();
+}
