@@ -68,35 +68,45 @@ const DAILY_FIELD_LABELS = {
     blocked: 'איפה אני תקוע'
 };
 
-function dailyRowHtml(entry, editable) {
+function dailyRowHtml(entry, { editable = false, isMe = false } = {}) {
     const fields = ['yesterday', 'today', 'blocked'];
     const cells = fields.map(f => editable
         ? `<div class="daily-col" data-label="${DAILY_FIELD_LABELS[f]}"><textarea class="daily-edit" data-field="${f}" rows="2" placeholder="הקלד כאן…">${escapeHtml(entry[f] || '')}</textarea></div>`
         : `<div class="daily-col" data-label="${DAILY_FIELD_LABELS[f]}">${entry[f] ? escapeHtml(entry[f]).replace(/\n/g, '<br>') : '<span class="daily-empty-cell">—</span>'}</div>`
     ).join('');
+    const actions = !isMe ? '' : editable
+        ? `<div class="daily-row-actions">
+               <button class="btn-secondary daily-cancel-btn" type="button">ביטול</button>
+               <button class="btn-primary daily-save-btn" type="button">שמור</button>
+           </div>`
+        : `<div class="daily-row-actions">
+               <button class="btn-secondary daily-edit-btn" type="button">${ICONS.pencil} ערוך</button>
+           </div>`;
     return `
-        <div class="daily-table-row${editable ? ' daily-table-row-me' : ''}">
+        <div class="daily-table-row${isMe ? ' daily-table-row-me' : ''}">
             <div class="daily-col-user">
                 <span class="avatar" style="--hue:${entry.userHue ?? 200}">${getInitials(entry.userName)}</span>
-                <span class="daily-username">${escapeHtml(entry.userName)}${editable ? ' (אני)' : ''}</span>
+                <span class="daily-username">${escapeHtml(entry.userName)}${isMe ? ' (אני)' : ''}</span>
             </div>
             ${cells}
+            ${actions}
         </div>
     `;
 }
 
-function renderDailyTable(daily, editable) {
+function renderDailyTable(daily, forMe) {
     const user = getUser();
     let rows = '';
-    if (editable) {
+    if (forMe) {
         const myEntry = daily.entries.find(e => e.userName === user.name) ||
             { userName: user.name, userHue: user.hue, yesterday: '', today: '', blocked: '' };
-        rows += dailyRowHtml(myEntry, true);
-        daily.entries.filter(e => e.userName !== user.name).forEach(e => rows += dailyRowHtml(e, false));
+        const hasContent = !!(myEntry.yesterday || myEntry.today || myEntry.blocked);
+        rows += dailyRowHtml(myEntry, { editable: !hasContent, isMe: true });
+        daily.entries.filter(e => e.userName !== user.name).forEach(e => rows += dailyRowHtml(e));
     } else {
-        daily.entries.forEach(e => rows += dailyRowHtml(e, false));
+        daily.entries.forEach(e => rows += dailyRowHtml(e));
     }
-    if (!daily.entries.length && !editable) rows = `<div class="daily-empty">אין דיווחים ביום זה</div>`;
+    if (!daily.entries.length && !forMe) rows = `<div class="daily-empty">אין דיווחים ביום זה</div>`;
     return `
         <div class="daily-table">
             <div class="daily-table-row daily-table-head">
@@ -135,16 +145,47 @@ function openDailyModal() {
     document.body.appendChild(overlay);
     overlay.addEventListener("click", (e) => { if (e.target === overlay) closeDailyModal(); });
 
-    bindDailyEditableInputs(overlay, today.id);
+    bindDailyRowActions(overlay.querySelector('.daily-table'), today.id);
     renderDailyHistory();
 }
 
-function bindDailyEditableInputs(root, dailyId) {
-    root.querySelectorAll('.daily-table-row-me .daily-edit').forEach(el => {
-        el.addEventListener('blur', () => {
-            upsertMyEntry(dailyId, { [el.dataset.field]: el.value });
+// Wire up the edit/save/cancel buttons on "my" row. Re-bound every time
+// the row is re-rendered (it's a small handful of listeners).
+function bindDailyRowActions(table, dailyId) {
+    if (!table) return;
+
+    const editBtn = table.querySelector('.daily-table-row-me .daily-edit-btn');
+    if (editBtn) {
+        editBtn.addEventListener('click', () => renderMyDailyRow(table, dailyId, true));
+    }
+
+    const cancelBtn = table.querySelector('.daily-table-row-me .daily-cancel-btn');
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', () => renderMyDailyRow(table, dailyId, false));
+    }
+
+    const saveBtn = table.querySelector('.daily-table-row-me .daily-save-btn');
+    if (saveBtn) {
+        saveBtn.addEventListener('click', () => {
+            const row = table.querySelector('.daily-table-row-me');
+            const fields = {};
+            row.querySelectorAll('.daily-edit').forEach(el => { fields[el.dataset.field] = el.value; });
+            upsertMyEntry(dailyId, fields);
+            renderMyDailyRow(table, dailyId, false);
+            renderDailyHistory();
         });
-    });
+    }
+}
+
+// Replace "my" row with its editable or read-only rendering and re-bind actions.
+function renderMyDailyRow(table, dailyId, editable) {
+    const user = getUser();
+    const daily = getDailies().find(d => d.id === dailyId) || { entries: [] };
+    const myEntry = daily.entries.find(e => e.userName === user.name) ||
+        { userName: user.name, userHue: user.hue, yesterday: '', today: '', blocked: '' };
+    const row = table.querySelector('.daily-table-row-me');
+    if (row) row.outerHTML = dailyRowHtml(myEntry, { editable, isMe: true });
+    bindDailyRowActions(table, dailyId);
 }
 
 function renderDailyHistory() {
