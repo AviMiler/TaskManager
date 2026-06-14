@@ -1580,7 +1580,6 @@ function buildCard(task) {
                 </span>
             ` : ''}
             <div class="card-trailing">
-                ${task.createdBy && task.createdBy !== 'unknown' ? `<span class="card-creator" title="נוצר ע״י ${task.createdBy}">${task.createdBy}</span>` : ''}
                 ${task.assignee ? `<div class="avatar avatar-sm" style="--hue: ${nameHue(task.assignee)};" title="${task.assignee}">${initials(task.assignee)}</div>` : ''}
             </div>
         </div>
@@ -1723,6 +1722,9 @@ function buildModal(task, isNew, defaultColumnId) {
                 <h2 class="modal-title">${isNew ? 'משימה חדשה' : 'עריכת משימה'}</h2>
                 <button class="modal-close" type="button" aria-label="סגור" data-action="closeModal()">×</button>
             </div>
+            ${!isNew && t.createdBy && t.createdBy !== 'unknown'
+                ? `<div class="modal-creator">נוצר על ידי <strong>${t.createdBy}</strong></div>`
+                : ''}
             <div class="modal-body">
                 <div class="field">
                     <label class="field-label">כותרת *</label>

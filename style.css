@@ -237,6 +237,18 @@ input {
     display: none;
 }
 
+/* Creator line at the top of the task editor */
+.modal-creator {
+    padding: 8px 20px 0;
+    font-size: 12px;
+    color: var(--ink-f);
+}
+
+.modal-creator strong {
+    color: var(--ink-s);
+    font-weight: 600;
+}
+
 /* First-time profile setup intro */
 .modal-intro {
     margin: 0 20px 4px;
