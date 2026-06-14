@@ -32,7 +32,7 @@ window.openEditModalForTask = openEditModalForTask;
 window.openSearchPage = openSearchPage;
 // Triggers the hidden <input type="file"> used for JSON import. Replaces the
 // former inline onclick="document.getElementById('importFile').click()".
-window.importData = function importData() {
+window.triggerImportFile = function triggerImportFile() {
     const el = document.getElementById('importFile');
     if (el) el.click();
 };

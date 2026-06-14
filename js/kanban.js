@@ -157,7 +157,7 @@ function buildCard(task) {
                         <path d="M8 2v4"/><path d="M16 2v4"/><path d="M3 9h18"/>
                         <rect x="3" y="4" width="18" height="18" rx="2"/>
                     </svg>
-                    ${task.due}
+                    ${formatDueDate(task.due).display}
                 </span>
             ` : ''}
             <div class="card-trailing">

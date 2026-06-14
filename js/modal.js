@@ -144,7 +144,7 @@ function formatDueDate(isoDate) {
     now.setHours(0, 0, 0, 0);
     const dueIn = Math.floor((date - now) / (1000 * 60 * 60 * 24));
 
-    return { display: `${display}|${isoDate}`, dueIn };
+    return { display, dueIn };
 }
 
 async function saveTaskFromModal(taskId) {
@@ -156,8 +156,6 @@ async function saveTaskFromModal(taskId) {
 
     const isoDate = document.getElementById('modalDueDate').value;
     const dueInfo = formatDueDate(isoDate);
-    // Store ISO date as the "due" so we can re-edit; display via formatter
-    const dueDisplay = isoDate ? formatDueDate(isoDate).display.split('|')[0] : '';
 
     const assigneeSel = document.getElementById('modalAssignee');
     const assigneeId = assigneeSel && assigneeSel.value && assigneeSel.value !== '__add__'
@@ -172,7 +170,7 @@ async function saveTaskFromModal(taskId) {
         tag: document.getElementById('modalTag').value,
         assignee: assigneeName,
         assigneeId: assigneeId || null,
-        due: isoDate ? dueDisplay : '',
+        due: isoDate || '',
         dueIn: dueInfo.dueIn,
         taskType: document.getElementById('modalType').value,
     };

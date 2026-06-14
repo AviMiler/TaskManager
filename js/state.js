@@ -9,7 +9,8 @@ const DB = {
     user: 'tb_user',
     dailies: 'tb_dailies',
     mineOnly: 'tb_mine_only',
-    members: 'tb_members'
+    members: 'tb_members',
+    membersMigrated: 'tb_members_migrated'
 };
 
 const DEFAULT_USER = { name: 'דנה גולן', role: 'מנהל פרויקטים', hue: 200 };

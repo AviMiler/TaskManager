@@ -133,7 +133,7 @@ function renderList() {
                         <td><span class="priority priority-${t.priority || 'med'}">${priLabels[t.priority] || 'בינוני'}</span></td>
                         <td>${t.tag ? `<span class="tag tag-${KNOWN_TAGS.includes(t.tag) ? t.tag : 'default'}">${t.tag}</span>` : ''}</td>
                         <td>${t.assignee ? `<span class="list-assignee">${t.assignee}</span>` : ''}</td>
-                        <td>${t.due || ''}</td>
+                        <td>${t.due ? formatDueDate(t.due).display : ''}</td>
                         <td>
                             <button class="card-action-btn" type="button" aria-label="ערוך" data-action="openEditModal(${t.id})">${ICONS.pencil}</button>
                             ${canDeleteTask(t) ? `<button class="card-action-btn delete" type="button" aria-label="מחק" data-action="deleteTask(${t.id}, event)">×</button>` : ''}

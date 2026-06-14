@@ -47,7 +47,7 @@ function openSettingsMenu(anchor) {
         <div class="popover-title">הגדרות</div>
         <div class="popover-menu">
             <button class="popover-menu-item" type="button" data-action="exportData()">${ICONS.export} ייצא JSON</button>
-            <button class="popover-menu-item" type="button" data-action="importData()">${ICONS.import} ייבא JSON</button>
+            <button class="popover-menu-item" type="button" data-action="triggerImportFile()">${ICONS.import} ייבא JSON</button>
             <button class="popover-menu-item" type="button" data-action="showBackupInfo()">${ICONS.save} פרטי גיבוי</button>
             <button class="popover-menu-item" type="button" data-action="openManageTypesModal()">${ICONS.tag} ניהול סוגי משימות</button>
             <button class="popover-menu-item" type="button" data-action="openTeamModal()">👥 ניהול צוות</button>
@@ -81,8 +81,6 @@ function openUserMenu(anchor) {
         </div>
         <div class="popover-menu">
             <button class="popover-menu-item" type="button" data-action="openUserProfileModal()">👤 ערוך פרופיל</button>
-            <button class="popover-menu-item" type="button" data-action="exportData()">📥 ייצא נתונים</button>
-            <button class="popover-menu-item" type="button" data-action="showBackupInfo()">💾 פרטי גיבוי</button>
             <button class="popover-menu-item" type="button" data-action="exportData()">${ICONS.export} ייצא נתונים</button>
             <button class="popover-menu-item" type="button" data-action="showBackupInfo()">${ICONS.save} פרטי גיבוי</button>
         </div>

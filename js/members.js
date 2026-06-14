@@ -98,7 +98,13 @@ function assigneeOptionsHtml(selectedId) {
 }
 
 // Seed the roster from existing data and link tasks to members by id.
+// Runs only once: otherwise it would keep re-adding members that were
+// deliberately deleted from the team, since deleting a member doesn't
+// remove their createdById from past tasks.
 function migrateMembersAndAssignees() {
+    if (localStorage.getItem(DB.membersMigrated)) return;
+    localStorage.setItem(DB.membersMigrated, '1');
+
     const u = getUser();
     upsertMember({ id: u.id, name: u.name, role: u.role, hue: u.hue });
 
