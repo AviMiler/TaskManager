@@ -161,7 +161,7 @@ function buildCard(task) {
                 </span>
             ` : ''}
             <div class="card-trailing">
-                ${task.assignee ? `<div class="avatar avatar-sm" style="--hue: ${nameHue(task.assignee)};" title="${task.assignee}">${initials(task.assignee)}</div>` : ''}
+                ${task.assignee ? `<div class="avatar avatar-sm" style="--hue: ${getMemberById(task.assigneeId)?.hue ?? nameHue(task.assignee)};" title="${task.assignee}">${initials(task.assignee)}</div>` : ''}
             </div>
         </div>
     `;
