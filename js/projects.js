@@ -4,14 +4,19 @@
 // of teams (a team aggregating several sub-teams, up to org level).
 function getWorkspace() {
     const name = localStorage.getItem(DB.workspace);
-    return { name: name && name.trim() ? name : 'Workspace' };
+    return {
+        name: name && name.trim() ? name : 'Workspace',
+        updatedAt: localStorage.getItem(DB.workspaceUpdatedAt) || null
+    };
 }
 
-function saveWorkspace(name) {
+function saveWorkspace(name, updatedAt) {
     name = (name || '').trim();
     if (name) localStorage.setItem(DB.workspace, name);
     else localStorage.removeItem(DB.workspace);
+    localStorage.setItem(DB.workspaceUpdatedAt, updatedAt || new Date().toISOString());
     renderWorkspaceUI();
+    if (window.FSSync) FSSync.scheduleSave();
 }
 
 function renderWorkspaceUI() {
