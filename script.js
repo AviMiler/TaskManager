@@ -36,10 +36,10 @@ const PRESET_HUES = [0, 25, 50, 100, 140, 175, 210, 250, 275, 320];
 
 // Default kanban columns
 const DEFAULT_COLUMNS = [
-    { id: 'todo',    name: 'To Do',    hue: 220 },
-    { id: 'doing',   name: 'Active',   hue: 210 },
-    { id: 'testing', name: 'בבדיקות',  hue: 35  },
-    { id: 'done',    name: 'Closed',   hue: 145 }
+    { id: 'todo',    name: 'To Do',    hue: 220, order: 0 },
+    { id: 'doing',   name: 'Active',   hue: 210, order: 1 },
+    { id: 'testing', name: 'בבדיקות',  hue: 35,  order: 2 },
+    { id: 'done',    name: 'Closed',   hue: 145, order: 3 }
 ];
 
 const DEFAULT_TASK_TYPES = [
@@ -213,6 +213,20 @@ function createBackup() {
     if (window.FSSync) FSSync.scheduleSave();
 }
 
+// Column order is a per-record `order` field (last-write-wins like every other
+// field), NOT the array position — array position is lost by mergeById during
+// shared-file sync. Sorting on read is the single source of truth for ordering.
+function sortColumns(cols) {
+    return cols
+        .map((c, i) => ({ c, i }))
+        .sort((a, b) => {
+            const ao = a.c.order != null ? a.c.order : a.i;
+            const bo = b.c.order != null ? b.c.order : b.i;
+            return ao - bo || a.i - b.i;
+        })
+        .map(x => x.c);
+}
+
 function getColumns() {
     const d = localStorage.getItem(DB.columns);
     if (!d) {
@@ -221,7 +235,7 @@ function getColumns() {
     }
     try {
         const cols = JSON.parse(d);
-        if (Array.isArray(cols) && cols.length > 0) return cols;
+        if (Array.isArray(cols) && cols.length > 0) return sortColumns(cols);
     } catch (e) {}
     saveColumns(DEFAULT_COLUMNS);
     return DEFAULT_COLUMNS.slice();
@@ -257,7 +271,8 @@ async function addColumn(name) {
         return;
     }
     const id = 'col_' + newId();
-    columns.push({ id, name: safeName, hue: (columns.length * 47) % 360 });
+    const maxOrder = columns.reduce((m, c) => Math.max(m, c.order != null ? c.order : 0), -1);
+    columns.push({ id, name: safeName, hue: (columns.length * 47) % 360, order: maxOrder + 1, updatedAt: new Date().toISOString() });
     saveColumns(columns);
     renderKanban();
 }
@@ -1458,6 +1473,11 @@ function reorderColumn(draggedId, targetId) {
     if (fromIdx === -1 || toIdx === -1) return;
     const [moved] = columns.splice(fromIdx, 1);
     columns.splice(toIdx, 0, moved);
+    // Persist the new order as a per-record field + bump updatedAt so the
+    // shared-file merge (last-write-wins) keeps it instead of reverting to the
+    // remote array order.
+    const now = new Date().toISOString();
+    columns.forEach((c, i) => { c.order = i; c.updatedAt = now; });
     saveColumns(columns);
     renderKanban();
 }
