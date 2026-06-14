@@ -3,7 +3,8 @@
   "name": "TaskBoard - מנהל משימות",
   "version": "1.0.0",
   "description": "TaskBoard - a Kanban task manager that runs fully offline in the browser, with optional shared-file sync.",
-  "permissions": ["storage"],
+  "permissions": ["storage", "tabs"],
+  "host_permissions": ["file:///*"],
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
