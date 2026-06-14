@@ -8,7 +8,8 @@ const DB = {
     taskTypes: 'tb_task_types',
     user: 'tb_user',
     dailies: 'tb_dailies',
-    mineOnly: 'tb_mine_only'
+    mineOnly: 'tb_mine_only',
+    members: 'tb_members'
 };
 
 const DEFAULT_USER = { name: 'דנה גולן', role: 'מנהל פרויקטים', hue: 200 };
@@ -24,6 +25,7 @@ let activeSort = 'created-desc'; // 'created-desc' | 'created-asc' | 'priority' 
 let searchPageTerm = null;
 let searchPageFilters = { projectId: null, priority: null, state: null };
 let showMineOnly = localStorage.getItem(DB.mineOnly) === '1';
+let mandatoryProfileOpen = false;
 
 // Hue palette for project dots
 const HUES = [230, 160, 40, 290, 0, 60, 120, 180, 260, 320];

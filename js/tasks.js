@@ -18,6 +18,7 @@ async function addTask(data) {
         priority: data.priority || 'med',
         tag: escapeHtml((data.tag || '').trim()),
         assignee: escapeHtml((data.assignee || '').trim()),
+        assigneeId: data.assigneeId || null,
         due: escapeHtml((data.due || '').trim()),
         dueIn: data.dueIn !== undefined ? data.dueIn : null,
         taskType: data.taskType || ''
@@ -36,6 +37,7 @@ async function updateTask(id, data) {
     if (data.priority !== undefined) patch.priority = data.priority;
     if (data.tag !== undefined) patch.tag = escapeHtml(data.tag.trim());
     if (data.assignee !== undefined) patch.assignee = escapeHtml(data.assignee.trim());
+    if (data.assigneeId !== undefined) patch.assigneeId = data.assigneeId || null;
     if (data.due !== undefined) {
         patch.due = escapeHtml(data.due.trim());
         patch.dueIn = data.dueIn !== undefined ? data.dueIn : null;

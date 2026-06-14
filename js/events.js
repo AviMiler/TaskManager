@@ -3,11 +3,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupEventListeners();
     renderUserUI();
     migrateTaskOwnership();
+    migrateMembersAndAssignees();
     loadProjects();
     restoreCurrentProject();
 
     if (!localStorage.getItem(DB.user)) {
-        openUserProfileModal();
+        openUserProfileModal(true);
     }
 
     await store.init();
@@ -76,7 +77,7 @@ function setupEventListeners() {
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             const m = document.getElementById('taskModal');
-            if (m) { closeModal(); return; }
+            if (m) { if (!mandatoryProfileOpen) closeModal(); return; }
             const dm = document.getElementById('dailyModal');
             if (dm) { closeDailyModal(); return; }
             const sp = document.getElementById('searchPage');

@@ -161,7 +161,6 @@ function buildCard(task) {
                 </span>
             ` : ''}
             <div class="card-trailing">
-                ${task.createdBy && task.createdBy !== 'unknown' ? `<span class="card-creator" title="נוצר ע״י ${task.createdBy}">${task.createdBy}</span>` : ''}
                 ${task.assignee ? `<div class="avatar avatar-sm" style="--hue: ${nameHue(task.assignee)};" title="${task.assignee}">${initials(task.assignee)}</div>` : ''}
             </div>
         </div>

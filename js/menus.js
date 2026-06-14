@@ -50,6 +50,7 @@ function openSettingsMenu(anchor) {
             <button class="popover-menu-item" type="button" data-action="importData()">${ICONS.import} ייבא JSON</button>
             <button class="popover-menu-item" type="button" data-action="showBackupInfo()">${ICONS.save} פרטי גיבוי</button>
             <button class="popover-menu-item" type="button" data-action="openManageTypesModal()">${ICONS.tag} ניהול סוגי משימות</button>
+            <button class="popover-menu-item" type="button" data-action="openTeamModal()">👥 ניהול צוות</button>
             <button class="popover-menu-item" type="button" ${fsDisabled ? 'disabled title="תכונה זו זמינה רק ב-Chrome/Edge"' : ''} data-action="FSSync.connect()">${ICONS.save} ${fsLabel}</button>
             <button class="popover-menu-item" type="button" ${canCreate ? '' : 'disabled title="תכונה זו זמינה רק ב-Chrome/Edge"'} data-action="FSSync.createNew()">${ICONS.save} בחר מיקום לקובץ משותף חדש…</button>
             <button class="popover-menu-item danger" type="button" data-action="clearAllData()">${ICONS.trash} נקה את כל הנתונים</button>
@@ -214,5 +215,125 @@ function openManageTypesModal() {
 
 function closeManageTypesModal() {
     const m = document.getElementById('manageTypesModal');
+    if (m) m.remove();
+}
+
+// ===== Team management =====
+function openTeamModal() {
+    closePopovers();
+
+    const renderList = (container) => {
+        const me = getUser();
+        const members = getMembers().slice().sort((a, b) => (a.name || '').localeCompare(b.name || '', 'he'));
+        if (members.length === 0) {
+            container.innerHTML = '<div style="color:var(--ink-f);font-size:13px;padding:12px 0;">אין אנשי צוות עדיין</div>';
+            return;
+        }
+        container.innerHTML = members.map(m => {
+            const ini = initials(m.name) || (m.name || '').substring(0, 2);
+            const isMe = String(m.id) === String(me.id);
+            return `
+            <div class="team-row" data-member-id="${m.id}">
+                <div class="avatar avatar-sm" style="--hue:${m.hue};">${escapeHtml(ini)}</div>
+                <input type="text" class="field-input team-name-input" value="${escapeHtml(m.name)}" data-member-id="${m.id}">
+                ${isMe ? '<span class="team-me-badge">אני</span>' : ''}
+                <button class="manage-type-delete" type="button" data-del-member="${m.id}" aria-label="מחק" ${isMe ? 'disabled title="לא ניתן למחוק את עצמך"' : ''}>×</button>
+            </div>`;
+        }).join('');
+
+        container.querySelectorAll('.team-name-input').forEach(input => {
+            const commit = () => {
+                const id = input.dataset.memberId;
+                const newName = input.value.trim();
+                const current = memberName(id);
+                if (!newName || newName === current) { input.value = current; return; }
+                renameMember(id, newName);
+                // Keep the profile in sync if I renamed myself.
+                if (String(id) === String(getUser().id)) {
+                    const u = getUser();
+                    saveUser({ name: newName, role: u.role, hue: u.hue });
+                }
+                renderList(container);
+                loadProjects();
+                rerenderCurrentView();
+            };
+            input.addEventListener('keydown', e => { if (e.key === 'Enter') input.blur(); });
+            input.addEventListener('blur', commit);
+        });
+
+        container.querySelectorAll('[data-del-member]').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const id = btn.dataset.delMember;
+                const m = getMemberById(id);
+                if (!m) return;
+                const used = getAllTasks().filter(t => String(t.assigneeId) === String(id)).length;
+                const msg = used > 0
+                    ? `"${m.name}" מוגדר כאחראי ב-${used} משימות. למחוק את איש הצוות? המשימות יישארו ללא אחראי.`
+                    : `למחוק את "${m.name}" מהצוות?`;
+                const ok = await showConfirm(msg, 'מחיקת איש צוות', 'מחק', 'ביטול');
+                if (!ok) return;
+                if (used > 0) {
+                    saveTasks(getAllTasks().map(t =>
+                        String(t.assigneeId) === String(id) ? { ...t, assigneeId: null, assignee: '', updatedAt: new Date().toISOString() } : t
+                    ));
+                }
+                removeMember(id);
+                renderList(container);
+                loadProjects();
+                rerenderCurrentView();
+            });
+        });
+    };
+
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.id = 'teamModal';
+    overlay.innerHTML = `
+        <div class="modal" data-action="event.stopPropagation()" style="max-width:440px;">
+            <div class="modal-header">
+                <h2 class="modal-title">ניהול צוות</h2>
+                <button class="modal-close" type="button" aria-label="סגור" data-action="closeTeamModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <p style="color:var(--ink-f);font-size:12px;margin-bottom:10px;">שינוי שם מתעדכן אוטומטית בכל המשימות המשויכות.</p>
+                <div id="teamList"></div>
+                <div class="manage-type-add">
+                    <div class="manage-type-add-row">
+                        <input type="text" id="newMemberName" class="field-input" placeholder="שם איש צוות חדש...">
+                        <button class="btn-primary" type="button" id="addMemberBtn">הוסף</button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-primary" type="button" data-action="closeTeamModal()">סגור</button>
+            </div>
+        </div>
+    `;
+
+    overlay.addEventListener("click", (e) => { if (e.target === overlay) closeTeamModal(); });
+    document.body.appendChild(overlay);
+
+    const container = overlay.querySelector('#teamList');
+    renderList(container);
+
+    const addBtn = overlay.querySelector('#addMemberBtn');
+    const nameInput = overlay.querySelector('#newMemberName');
+    const doAdd = async () => {
+        const name = nameInput.value.trim();
+        if (!name) return;
+        if (getMembers().find(m => m.name === name)) {
+            await showAlert('איש צוות עם שם זה כבר קיים');
+            return;
+        }
+        addMember(name);
+        nameInput.value = '';
+        renderList(container);
+    };
+    addBtn.addEventListener('click', doAdd);
+    nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') doAdd(); });
+}
+
+function closeTeamModal() {
+    const m = document.getElementById('teamModal');
     if (m) m.remove();
 }

@@ -37,6 +37,9 @@ function buildModal(task, isNew, defaultColumnId) {
                 <h2 class="modal-title">${isNew ? 'משימה חדשה' : 'עריכת משימה'}</h2>
                 <button class="modal-close" type="button" aria-label="סגור" data-action="closeModal()">×</button>
             </div>
+            ${!isNew && t.createdBy && t.createdBy !== 'unknown'
+                ? `<div class="modal-creator">נוצר על ידי <strong>${t.createdBy}</strong></div>`
+                : ''}
             <div class="modal-body">
                 <div class="field">
                     <label class="field-label">כותרת *</label>
@@ -78,7 +81,9 @@ function buildModal(task, isNew, defaultColumnId) {
                 <div class="field-row">
                     <div class="field">
                         <label class="field-label">אחראי</label>
-                        <input type="text" id="modalAssignee" class="field-input" value="${unescapeForInput(t.assignee)}" placeholder="שם מלא">
+                        <select id="modalAssignee" class="field-select">
+                            ${assigneeOptionsHtml(t.assigneeId)}
+                        </select>
                     </div>
                     <div class="field">
                         <label class="field-label">תאריך יעד</label>
@@ -97,6 +102,24 @@ function buildModal(task, isNew, defaultColumnId) {
     `;
 
     overlay.addEventListener("click", (e) => { if (e.target === overlay) closeModal(); });
+
+    // Assignee dropdown: support adding a new team member inline.
+    const assigneeSel = overlay.querySelector('#modalAssignee');
+    if (assigneeSel) {
+        let lastValue = assigneeSel.value;
+        assigneeSel.addEventListener('change', async () => {
+            if (assigneeSel.value === '__add__') {
+                const name = await showPrompt('שם איש הצוות החדש:', '', 'הוסף איש צוות');
+                if (name && name.trim()) {
+                    const m = addMember(name.trim());
+                    assigneeSel.innerHTML = assigneeOptionsHtml(m.id);
+                } else {
+                    assigneeSel.value = lastValue;
+                }
+            }
+            lastValue = assigneeSel.value;
+        });
+    }
 
     return overlay;
 }
@@ -136,13 +159,19 @@ async function saveTaskFromModal(taskId) {
     // Store ISO date as the "due" so we can re-edit; display via formatter
     const dueDisplay = isoDate ? formatDueDate(isoDate).display.split('|')[0] : '';
 
+    const assigneeSel = document.getElementById('modalAssignee');
+    const assigneeId = assigneeSel && assigneeSel.value && assigneeSel.value !== '__add__'
+        ? assigneeSel.value : '';
+    const assigneeName = assigneeId ? memberName(assigneeId) : '';
+
     const data = {
         title: title,
         description: document.getElementById('modalDescription').value,
         state: document.getElementById('modalState').value,
         priority: document.getElementById('modalPriority').value,
         tag: document.getElementById('modalTag').value,
-        assignee: document.getElementById('modalAssignee').value,
+        assignee: assigneeName,
+        assigneeId: assigneeId || null,
         due: isoDate ? dueDisplay : '',
         dueIn: dueInfo.dueIn,
         taskType: document.getElementById('modalType').value,

@@ -336,6 +336,7 @@ const FSSync = {
         localStorage.setItem(DB.projects, JSON.stringify(mergeById(getProjects(), remote.projects || [])));
         localStorage.setItem(DB.columns, JSON.stringify(mergeById(getColumns(), remote.columns || [])));
         localStorage.setItem(DB.taskTypes, JSON.stringify(mergeById(getTaskTypes(), remote.taskTypes || [])));
+        localStorage.setItem(DB.members, JSON.stringify(mergeById(getMembers(), remote.members || [])));
 
         loadProjects();
         rerenderCurrentView();
@@ -360,6 +361,7 @@ const FSSync = {
                 const mergedProjects = mergeById(remote.projects || [], getProjects());
                 const mergedColumns = mergeById(remote.columns || [], getColumns());
                 const mergedTypes = mergeById(remote.taskTypes || [], getTaskTypes());
+                const mergedMembers = mergeById(remote.members || [], getMembers());
 
                 // Optimistic-concurrency guard: re-read right before writing.
                 // If another client advanced `generation` since we read, redo
@@ -382,13 +384,14 @@ const FSSync = {
                     tasks: mergedTasks,
                     columns: mergedColumns,
                     taskTypes: mergedTypes,
+                    members: mergedMembers,
                     tombstones,
                     lastModified: new Date().toISOString(),
                     lastModifiedBy: getUser().name,
                     lastModifiedById: getUser().id
                 });
 
-                merged = { mergedTasks, mergedProjects, mergedColumns, mergedTypes };
+                merged = { mergedTasks, mergedProjects, mergedColumns, mergedTypes, mergedMembers };
                 break;
             }
 
@@ -399,6 +402,7 @@ const FSSync = {
                 localStorage.setItem(DB.projects, JSON.stringify(merged.mergedProjects));
                 localStorage.setItem(DB.columns, JSON.stringify(merged.mergedColumns));
                 localStorage.setItem(DB.taskTypes, JSON.stringify(merged.mergedTypes));
+                localStorage.setItem(DB.members, JSON.stringify(merged.mergedMembers));
                 loadProjects();
                 rerenderCurrentView();
             }

@@ -42,6 +42,13 @@
                     <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/>
                 </svg>
             </button>
+            <button class="topbar-user" type="button" title="פרופיל המשתמש" aria-label="פרופיל המשתמש" data-action="openUserProfileModal()">
+                <span class="avatar avatar-sm" id="topUserAvatar">אא</span>
+                <span class="topbar-user-meta">
+                    <span class="topbar-user-name" id="topUserName">משתמש</span>
+                    <span class="topbar-user-role" id="topUserRole"></span>
+                </span>
+            </button>
         </div>
 
         <!-- Body -->
@@ -154,6 +161,7 @@
     <script src="js/utils.js"></script>
     <script src="js/dialogs.js"></script>
     <script src="js/storage.js"></script>
+    <script src="js/members.js"></script>
     <script src="js/user.js"></script>
     <script src="js/projects.js"></script>
     <script src="js/links.js"></script>

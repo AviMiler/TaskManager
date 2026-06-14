@@ -16,8 +16,14 @@ function getUser() {
 
 function saveUser(user) {
     localStorage.setItem(DB.user, JSON.stringify(user));
+    const u = getUser();
+    // Keep the team roster in sync with the profile and propagate the name to
+    // every task that references this person.
+    upsertMember({ id: u.id, name: u.name, role: u.role, hue: u.hue });
+    propagateMemberName(u.id);
     createBackup();
     renderUserUI();
+    rerenderCurrentView();
 }
 
 // Ownership check for the "show only mine" filter. An item is "mine" when its
@@ -29,7 +35,10 @@ function isMine(item, { includeAssignee = false } = {}) {
     const me = getUser();
     if (!item.createdById) return true; // legacy / unowned — visible to everyone
     if (item.createdById === me.id) return true;
-    if (includeAssignee && item.assignee && item.assignee === me.name) return true;
+    if (includeAssignee) {
+        if (String(item.assigneeId) === String(me.id)) return true;
+        if (item.assignee && item.assignee === me.name) return true;
+    }
     return false;
 }
 
@@ -44,6 +53,17 @@ function toggleMineOnly() {
 function renderUserUI() {
     const u = getUser();
     const ini = initials(u.name) || u.name.substring(0, 2);
+
+    // Topbar user chip (avatar + name + role)
+    const chipAvatar = document.getElementById('topUserAvatar');
+    if (chipAvatar) {
+        chipAvatar.style.setProperty('--hue', u.hue);
+        chipAvatar.textContent = ini;
+    }
+    const chipName = document.getElementById('topUserName');
+    if (chipName) chipName.textContent = u.name;
+    const chipRole = document.getElementById('topUserRole');
+    if (chipRole) chipRole.textContent = u.role || '';
 
     const topAvatar = document.querySelector('.topbar > .avatar');
     if (topAvatar) {
@@ -85,9 +105,10 @@ function renderSyncStatusUI() {
     dot.title = FSSync.getStatusLabel();
 }
 
-function openUserProfileModal() {
+function openUserProfileModal(mandatory = false) {
     closePopovers();
     const u = getUser();
+    mandatoryProfileOpen = !!mandatory;
 
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
@@ -96,8 +117,9 @@ function openUserProfileModal() {
         <div class="modal" data-action="event.stopPropagation()">
             <div class="modal-header">
                 <h2 class="modal-title">פרטי המשתמש</h2>
-                <button class="modal-close" type="button" aria-label="סגור" data-action="closeModal()">×</button>
+                ${mandatory ? '' : '<button class="modal-close" type="button" aria-label="סגור" data-action="closeModal()">×</button>'}
             </div>
+            ${mandatory ? '<div class="modal-intro">ברוך הבא! הזן שם כדי שהמשימות והפרויקטים שתיצור ישויכו אליך.</div>' : ''}
             <div class="modal-body">
                 <div class="field">
                     <label class="field-label">שם מלא *</label>
@@ -120,12 +142,16 @@ function openUserProfileModal() {
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn-secondary" type="button" data-action="closeModal()">ביטול</button>
+                ${mandatory ? '' : '<button class="btn-secondary" type="button" data-action="closeModal()">ביטול</button>'}
                 <button class="btn-primary" type="button" data-action="saveUserFromModal()">שמור</button>
             </div>
         </div>
     `;
-    overlay.addEventListener("click", (e) => { if (e.target === overlay) closeModal(); });
+    // Only allow dismiss-by-backdrop when the profile already exists. The
+    // first-time setup is mandatory so a stray click can't discard it.
+    if (!mandatory) {
+        overlay.addEventListener("click", (e) => { if (e.target === overlay) closeModal(); });
+    }
     document.body.appendChild(overlay);
 
     const nameInput = overlay.querySelector('#userName');
@@ -160,5 +186,6 @@ function saveUserFromModal() {
     const role = document.getElementById('userRole').value.trim();
     const hue = parseInt(document.getElementById('userHue').value, 10) || 0;
     saveUser({ name, role, hue });
+    mandatoryProfileOpen = false;
     closeModal();
 }
