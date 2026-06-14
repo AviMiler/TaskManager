@@ -360,6 +360,15 @@ const FSSync = {
         localStorage.setItem(DB.members, JSON.stringify(mergeById(getMembers(), remote.members || [], memberTombstones)));
         localStorage.setItem(DB.dailies, JSON.stringify(mergeDailies(getDailies(), remote.dailies || [])));
 
+        if (remote.workspace && remote.workspace.name) {
+            const local = getWorkspace();
+            if (!local.updatedAt || (remote.workspace.updatedAt && remote.workspace.updatedAt > local.updatedAt)) {
+                localStorage.setItem(DB.workspace, remote.workspace.name);
+                localStorage.setItem(DB.workspaceUpdatedAt, remote.workspace.updatedAt);
+                renderWorkspaceUI();
+            }
+        }
+
         loadProjects();
         rerenderCurrentView();
         refreshDailyModalIfOpen();
@@ -388,6 +397,13 @@ const FSSync = {
                 const mergedMembers = mergeById(remote.members || [], getMembers(), memberTombstones);
                 const mergedDailies = mergeDailies(remote.dailies || [], getDailies());
 
+                const local = getWorkspace();
+                const remoteWorkspace = remote.workspace || null;
+                const mergedWorkspace = (remoteWorkspace && remoteWorkspace.updatedAt &&
+                    (!local.updatedAt || remoteWorkspace.updatedAt > local.updatedAt))
+                    ? remoteWorkspace
+                    : { name: local.name, updatedAt: local.updatedAt };
+
                 // Optimistic-concurrency guard: re-read right before writing.
                 // If another client advanced `generation` since we read, redo
                 // the merge against their version instead of clobbering it.
@@ -411,6 +427,7 @@ const FSSync = {
                     taskTypes: mergedTypes,
                     members: mergedMembers,
                     dailies: mergedDailies,
+                    workspace: mergedWorkspace,
                     tombstones,
                     memberTombstones,
                     lastModified: new Date().toISOString(),
@@ -418,7 +435,7 @@ const FSSync = {
                     lastModifiedById: getUser().id
                 });
 
-                merged = { mergedTasks, mergedProjects, mergedColumns, mergedTypes, mergedMembers, mergedDailies };
+                merged = { mergedTasks, mergedProjects, mergedColumns, mergedTypes, mergedMembers, mergedDailies, mergedWorkspace };
                 break;
             }
 
@@ -432,6 +449,11 @@ const FSSync = {
                 localStorage.setItem(DB.taskTypes, JSON.stringify(merged.mergedTypes));
                 localStorage.setItem(DB.members, JSON.stringify(merged.mergedMembers));
                 localStorage.setItem(DB.dailies, JSON.stringify(merged.mergedDailies));
+                if (merged.mergedWorkspace && merged.mergedWorkspace.updatedAt !== getWorkspace().updatedAt) {
+                    localStorage.setItem(DB.workspace, merged.mergedWorkspace.name);
+                    localStorage.setItem(DB.workspaceUpdatedAt, merged.mergedWorkspace.updatedAt);
+                    renderWorkspaceUI();
+                }
                 loadProjects();
                 rerenderCurrentView();
                 refreshDailyModalIfOpen();

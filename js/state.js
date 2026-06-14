@@ -13,6 +13,7 @@ const DB = {
     members: 'tb_members',
     membersMigrated: 'tb_members_migrated',
     workspace: 'tb_workspace',
+    workspaceUpdatedAt: 'tb_workspace_updated_at',
     identity: 'tb_identity',
     identityMigrated: 'tb_identity_migrated'
 };
