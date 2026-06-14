@@ -608,6 +608,26 @@ input {
     border-bottom: 1px solid var(--line);
     position: relative;
     overflow: hidden;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.project-settings-open-btn {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    border-radius: var(--r-sm);
+    color: var(--ink-f);
+    display: grid;
+    place-items: center;
+    transition: background 0.15s, color 0.15s;
+}
+
+.project-settings-open-btn:hover {
+    background: #f0f7ff;
+    color: var(--blue);
 }
 
 .project-details-color-bar {

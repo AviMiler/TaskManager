@@ -358,6 +358,7 @@ function renderProjectDetails() {
         <div class="project-details-header" style="--hue: ${hue};">
             <div class="project-details-color-bar"></div>
             <div class="project-details-name">${project.name}</div>
+            <button class="project-settings-open-btn" type="button" title="הגדרות פרויקט" aria-label="הגדרות פרויקט" data-action="openProjectSettings(${project.id}, event)">${ICONS.pencil}</button>
         </div>
         <div class="project-details-body">
             <div class="project-details-section-label">משימות לפי שלב</div>
