@@ -1,5 +1,6 @@
 // ===== Init =====
 document.addEventListener('DOMContentLoaded', async () => {
+    await syncClientId();
     setupEventListeners();
     renderUserUI();
     migrateTaskOwnership();
