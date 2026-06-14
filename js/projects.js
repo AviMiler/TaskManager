@@ -453,7 +453,7 @@ function renderProjectDetails() {
 
     const links = Array.isArray(project.links) ? project.links : [];
     const linksHtml = links.map(l => `
-        <div class="project-link-btn" data-link-id="${l.id}" title="${l.url.startsWith('[#VSC#]') ? l.url.replace('[#VSC#]', '') : l.url}">
+        <div class="project-link-btn" data-link-id="${l.id}" title="${escapeAttr(l.url.startsWith('[#VSC#]') ? l.url.replace('[#VSC#]', '') : l.url)}">
             <span class="project-link-icon">${renderLinkIcon(l.icon)}</span>
             <span class="project-link-name">${l.name}</span>
             <button class="project-link-edit" type="button" data-edit-link="${l.id}" aria-label="ערוך">✎</button>
