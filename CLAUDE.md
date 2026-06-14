@@ -33,7 +33,7 @@ TaskManager/
 ## js/ — מפת פונקציות לפי קובץ
 
 ### state.js (63 שורות) — קבועים + state גלובלי
-`DB` (מפתחות localStorage, כולל `members: 'tb_members'`), `DEFAULT_USER`, `currentProjectId`, `editingTaskId`, `mandatoryProfileOpen`, `HUES`, `KNOWN_TAGS`, `PRESET_HUES`, `DEFAULT_COLUMNS`, `DEFAULT_TASK_TYPES`, `ICONS`
+`DB` (מפתחות localStorage, כולל `members: 'tb_members'`, `workspace: 'tb_workspace'`), `DEFAULT_USER`, `currentProjectId`, `editingTaskId`, `mandatoryProfileOpen`, `HUES`, `KNOWN_TAGS`, `PRESET_HUES`, `DEFAULT_COLUMNS`, `DEFAULT_TASK_TYPES`, `ICONS`
 
 ### utils.js (39) — עוזרים כלליים
 `escapeHtml`, `unescapeForInput`, `nameHue`, `initials`, `escapeAttr`
@@ -50,8 +50,8 @@ TaskManager/
 ### user.js (191) — פרופיל משתמש נוכחי + UI סנכרון
 `getUser`, `saveUser`, `isMine`, `toggleMineOnly`, `renderUserUI` (topbar chip: `#topUserAvatar`/`#topUserName`/`#topUserRole`), `renderSyncStatusUI`, `openUserProfileModal(mandatory)`, `saveUserFromModal`
 
-### projects.js (339) — CRUD פרויקטים + סלקטור
-`getCurrentProjectId`, `setCurrentProjectId`, `addProject`, `deleteProject`, `openProjectSettings`, `closeProjectSettings`, `saveProjectSettings`, `selectProject`, `restoreCurrentProject`, `loadProjects`, `updateSelectorButton`, `renderProjectDetails`
+### projects.js — workspace (צוות) + CRUD פרויקטים + סלקטור
+`getWorkspace`, `saveWorkspace`, `renderWorkspaceUI` (topbar: `#workspaceName`), `editWorkspaceName`, `toggleSidebarSection(sectionId)` (קיפול מדורי sidebar), `getCurrentProjectId`, `setCurrentProjectId`, `addProject`, `deleteProject`, `openProjectSettings`, `closeProjectSettings`, `saveProjectSettings`, `selectProject`, `restoreCurrentProject`, `loadProjects`, `updateSelectorButton` (סלקטור עבר ל-topbar breadcrumb: `#projectSelectorBtn`/`#currentProjectName`/`#projectDropdown`), `renderProjectMembers`, `renderProjectDetails` (ממלא 3 מדורי sidebar: `#projectInfoBody`/`#projectMembersBody`/`#projectDetails`)
 
 ### links.js (316) — קישורי פרויקט + dropdown סלקטור
 `renderLinkIcon`, `openLinkModal`, `closeLinkModal`, `saveLinkFromModal`, `deleteLink`, `toggleProjectDropdown`, `closeProjectDropdown`
@@ -93,7 +93,7 @@ TaskManager/
 
 - `fsSync.js` — `FSSync` object: sync לקובץ JSON משותף (File System Access API), merge לפי `id`+timestamps, כולל `members`
 - `actions.js` — דיספצ'ר `data-action="fn(args)"` (תחליף ל-inline onclick, CSP-safe ל-MV3)
-- `index.html` — מבנה DOM: topbar (לוגו/חיפוש/דיילי/התראות/הגדרות/פרופיל), sidebar (project selector + details), main (page header/tabs/kanban board/empty state)
+- `index.html` — מבנה DOM: topbar (לוגו/breadcrumb: workspace(צוות)+`/`+project selector dropdown/חיפוש/דיילי/התראות/הגדרות/פרופיל), sidebar (3 מדורים: פרטי פרויקט מתקפל + חברים בפרויקט מתקפל + project details: stats/links), main (page header/tabs/kanban board/empty state)
 
 ## טיפים לסוכנים
 

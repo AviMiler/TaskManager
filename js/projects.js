@@ -1,3 +1,40 @@
+// ===== Workspace (team) =====
+// The workspace represents the team that owns all the data shown in the app.
+// For now it is a single editable name; later this will grow into a hierarchy
+// of teams (a team aggregating several sub-teams, up to org level).
+function getWorkspace() {
+    const name = localStorage.getItem(DB.workspace);
+    return { name: name && name.trim() ? name : 'Workspace' };
+}
+
+function saveWorkspace(name) {
+    name = (name || '').trim();
+    if (name) localStorage.setItem(DB.workspace, name);
+    else localStorage.removeItem(DB.workspace);
+    renderWorkspaceUI();
+}
+
+function renderWorkspaceUI() {
+    const el = document.getElementById('workspaceName');
+    if (el) el.textContent = getWorkspace().name;
+}
+
+async function editWorkspaceName() {
+    const current = getWorkspace().name;
+    const name = await showPrompt('שם הצוות / workspace', current === 'Workspace' ? '' : current, 'שם הצוות');
+    if (name === null) return;
+    saveWorkspace(name);
+}
+
+// Collapse/expand a sidebar section (פרטי פרויקט / חברים בפרויקט).
+function toggleSidebarSection(sectionId) {
+    const section = document.getElementById(sectionId);
+    if (!section) return;
+    const collapsed = section.classList.toggle('collapsed');
+    const header = section.querySelector('.sidebar-section-header');
+    if (header) header.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+}
+
 function getCurrentProjectId() {
     const saved = localStorage.getItem(DB.currentProject);
     return saved ? parseInt(saved) : null;
@@ -301,7 +338,7 @@ function loadProjects() {
 function updateSelectorButton() {
     const btn = document.getElementById('projectSelectorBtn');
     const dot = document.getElementById('selectorDot');
-    const nameEl = document.getElementById('selectorProjectName');
+    const nameEl = document.getElementById('currentProjectName');
     if (!btn || !dot || !nameEl) return;
 
     if (currentProjectId) {
@@ -310,7 +347,7 @@ function updateSelectorButton() {
             const hue = HUES[project.hueIdx || 0];
             dot.style.setProperty('--hue', hue);
             dot.style.background = `oklch(0.72 0.12 ${hue})`;
-            nameEl.textContent = project.name;
+            nameEl.innerHTML = project.name;
             return;
         }
     }
@@ -318,17 +355,53 @@ function updateSelectorButton() {
     nameEl.textContent = 'בחר פרויקט';
 }
 
-function renderProjectDetails() {
-    const panel = document.getElementById('projectDetails');
-    if (!panel) return;
-
-    if (!currentProjectId) {
-        panel.innerHTML = '<div class="project-details-empty">בחר פרויקט להצגת פרטים</div>';
+function renderProjectMembers(project) {
+    const body = document.getElementById('projectMembersBody');
+    if (!body) return;
+    if (!project) {
+        body.innerHTML = '<div class="project-details-empty">—</div>';
         return;
     }
 
-    const project = getProjects().find(p => p.id === currentProjectId);
+    const allMembers = getMembers();
+    const ownerId = String(project.ownerId ?? project.createdById ?? '');
+    let memberIds = (Array.isArray(project.memberIds) && project.memberIds.length)
+        ? project.memberIds.map(String)
+        : [ownerId].filter(Boolean);
+    memberIds = [...new Set(memberIds)];
+
+    if (!memberIds.length) {
+        body.innerHTML = '<div class="project-details-empty">אין חברים בפרויקט</div>';
+        return;
+    }
+
+    const me = getUser();
+    body.innerHTML = memberIds.map(mid => {
+        const m = allMembers.find(x => String(x.id) === mid);
+        const name = m ? m.name : mid;
+        const ini = initials(name) || (name || '').substring(0, 2);
+        const isOwner = mid === ownerId;
+        const isMe = mid === String(me.id);
+        return `
+        <div class="project-member-row">
+            <div class="avatar avatar-sm" style="--hue:${m ? m.hue : 200};">${escapeHtml(ini)}</div>
+            <span class="project-member-name">${escapeHtml(name)}</span>
+            ${isMe ? '<span class="team-me-badge">אני</span>' : ''}
+            ${isOwner ? '<span class="project-member-owner">בעלים</span>' : ''}
+        </div>`;
+    }).join('');
+}
+
+function renderProjectDetails() {
+    const panel = document.getElementById('projectDetails');
+    const infoBody = document.getElementById('projectInfoBody');
+    if (!panel) return;
+
+    const project = currentProjectId ? getProjects().find(p => p.id === currentProjectId) : null;
+
     if (!project) {
+        if (infoBody) infoBody.innerHTML = '<div class="project-details-empty">בחר פרויקט להצגת פרטים</div>';
+        renderProjectMembers(null);
         panel.innerHTML = '<div class="project-details-empty">בחר פרויקט להצגת פרטים</div>';
         return;
     }
@@ -338,6 +411,29 @@ function renderProjectDetails() {
     const cols = getColumns();
     const createdDate = new Date(project.createdAt).toLocaleDateString('he-IL', { day: 'numeric', month: 'long', year: 'numeric' });
 
+    // ===== Section 1: project info (description + meta) =====
+    if (infoBody) {
+        const descHtml = project.description
+            ? `<div class="project-info-desc">${project.description}</div>`
+            : '<div class="project-info-desc project-info-desc-empty">אין תיאור</div>';
+        infoBody.innerHTML = `
+            ${descHtml}
+            <div class="project-details-meta">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                    <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                <span>נוצר ${createdDate}${project.createdBy ? ` ע״י ${escapeHtml(project.createdBy)}` : ''}</span>
+            </div>
+            <button class="project-info-settings-btn" type="button" data-action="openProjectSettings(${project.id}, event)">
+                ${ICONS.pencil}<span>הגדרות פרויקט</span>
+            </button>
+        `;
+    }
+
+    // ===== Section 2: members =====
+    renderProjectMembers(project);
+
+    // ===== Section 3 (everything else): stats by stage + links =====
     const statsHtml = cols.map(col => {
         const count = tasks.filter(t => t.state === col.id).length;
         return `<div class="project-stat">
@@ -358,12 +454,7 @@ function renderProjectDetails() {
     `).join('');
 
     panel.innerHTML = `
-        <div class="project-details-header" style="--hue: ${hue};">
-            <div class="project-details-color-bar"></div>
-            <div class="project-details-name">${project.name}</div>
-            <button class="project-settings-open-btn" type="button" title="הגדרות פרויקט" aria-label="הגדרות פרויקט" data-action="openProjectSettings(${project.id}, event)">${ICONS.pencil}</button>
-        </div>
-        <div class="project-details-body">
+        <div class="project-details-body" style="--hue: ${hue};">
             <div class="project-details-section-label">משימות לפי שלב</div>
             <div class="project-stats">${statsHtml}</div>
 
@@ -374,13 +465,6 @@ function renderProjectDetails() {
                     <span class="project-link-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14"/><path d="M5 12h14"/></svg></span>
                     <span class="project-link-name">הוסף קישור</span>
                 </button>
-            </div>
-
-            <div class="project-details-meta">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                    <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-                </svg>
-                <span>נוצר ${createdDate}${project.createdBy ? ` ע״י ${escapeHtml(project.createdBy)}` : ''}</span>
             </div>
         </div>
     `;

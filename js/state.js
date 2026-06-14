@@ -11,7 +11,8 @@ const DB = {
     mineOnly: 'tb_mine_only',
     tasksMineOnly: 'tb_tasks_mine_only',
     members: 'tb_members',
-    membersMigrated: 'tb_members_migrated'
+    membersMigrated: 'tb_members_migrated',
+    workspace: 'tb_workspace'
 };
 
 const DEFAULT_USER = { name: 'דנה גולן', role: 'מנהל פרויקטים', hue: 200 };

@@ -17,9 +17,33 @@
             <div class="topbar-brand">TaskBoard</div>
             <div class="topbar-divider"></div>
             <div class="topbar-breadcrumb">
-                <span class="breadcrumb-label">Workspace</span>
+                <button class="breadcrumb-workspace" type="button" id="workspaceBtn" title="שם הצוות — לחץ לעריכה" aria-label="שם הצוות" data-action="editWorkspaceName()">
+                    <svg class="breadcrumb-workspace-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                    </svg>
+                    <span class="breadcrumb-workspace-name" id="workspaceName">Workspace</span>
+                </button>
                 <span class="breadcrumb-sep">/</span>
-                <span class="breadcrumb-project" id="currentProjectName">ביטוח לאומי</span>
+                <div class="breadcrumb-project-wrap">
+                    <button class="breadcrumb-project" id="projectSelectorBtn" type="button" aria-haspopup="listbox" aria-expanded="false">
+                        <span class="project-dot" id="selectorDot"></span>
+                        <span class="breadcrumb-project-name" id="currentProjectName">בחר פרויקט</span>
+                        <svg class="selector-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                            <path d="M6 9l6 6 6-6"/>
+                        </svg>
+                    </button>
+                    <div class="project-dropdown" id="projectDropdown" role="listbox">
+                        <button class="mine-only-toggle" id="mineOnlyToggle" type="button" role="switch" aria-checked="false" data-action="toggleMineOnly()">
+                            <span class="mine-only-switch"></span>
+                            <span class="mine-only-label">הצג רק את הפרויקטים שלי</span>
+                        </button>
+                        <div class="projects-list" id="projectsList"></div>
+                        <div class="sidebar-add">
+                            <input class="sidebar-input" type="text" placeholder="פרויקט חדש…" id="newProjectInput" aria-label="שם פרויקט חדש">
+                            <button class="sidebar-add-btn" type="button" aria-label="הוסף פרויקט">+</button>
+                        </div>
+                    </div>
+                </div>
             </div>
             <div class="topbar-search-wrap">
                 <svg class="topbar-search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
@@ -55,29 +79,29 @@
         <div class="body">
             <!-- Sidebar -->
             <aside class="sidebar">
-                <!-- Project Selector Dropdown -->
-                <div class="project-selector">
-                    <button class="project-selector-btn" id="projectSelectorBtn" type="button" aria-haspopup="listbox" aria-expanded="false">
-                        <span class="project-dot" id="selectorDot"></span>
-                        <span class="project-selector-name" id="selectorProjectName">בחר פרויקט</span>
-                        <svg class="selector-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-                            <path d="M6 9l6 6 6-6"/>
-                        </svg>
+                <!-- Project info (description) — collapsible section -->
+                <section class="sidebar-section" id="sidebarInfoSection">
+                    <button class="sidebar-section-header" type="button" data-action="toggleSidebarSection('sidebarInfoSection')" aria-expanded="true">
+                        <span class="sidebar-section-title">פרטי פרויקט</span>
+                        <svg class="sidebar-section-chevron" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
                     </button>
-                    <button class="mine-only-toggle" id="mineOnlyToggle" type="button" role="switch" aria-checked="false" data-action="toggleMineOnly()">
-                        <span class="mine-only-switch"></span>
-                        <span class="mine-only-label">הצג רק את הפרויקטים שלי</span>
-                    </button>
-                    <div class="project-dropdown" id="projectDropdown" role="listbox">
-                        <div class="projects-list" id="projectsList"></div>
-                        <div class="sidebar-add">
-                            <input class="sidebar-input" type="text" placeholder="פרויקט חדש…" id="newProjectInput" aria-label="שם פרויקט חדש">
-                            <button class="sidebar-add-btn" type="button" aria-label="הוסף פרויקט">+</button>
-                        </div>
+                    <div class="sidebar-section-body" id="projectInfoBody">
+                        <div class="project-details-empty">בחר פרויקט להצגת פרטים</div>
                     </div>
-                </div>
+                </section>
 
-                <!-- Project Details Panel -->
+                <!-- Project members — collapsible section -->
+                <section class="sidebar-section" id="sidebarMembersSection">
+                    <button class="sidebar-section-header" type="button" data-action="toggleSidebarSection('sidebarMembersSection')" aria-expanded="true">
+                        <span class="sidebar-section-title">חברים בפרויקט</span>
+                        <svg class="sidebar-section-chevron" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+                    </button>
+                    <div class="sidebar-section-body" id="projectMembersBody">
+                        <div class="project-details-empty">—</div>
+                    </div>
+                </section>
+
+                <!-- Everything else (stats by stage + links) -->
                 <div class="project-details" id="projectDetails">
                     <div class="project-details-empty">בחר פרויקט להצגת פרטים</div>
                 </div>

@@ -118,12 +118,35 @@ input {
 .topbar-breadcrumb {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 4px;
 }
 
-.breadcrumb-label {
-    font-size: 13px;
+.breadcrumb-workspace {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border-radius: var(--r-md);
+    background: none;
+    cursor: pointer;
     color: var(--ink-s);
+    transition: background 0.15s, color 0.15s;
+}
+
+.breadcrumb-workspace:hover {
+    background: var(--bg);
+    color: var(--ink);
+}
+
+.breadcrumb-workspace-icon {
+    flex-shrink: 0;
+    color: var(--ink-f);
+}
+
+.breadcrumb-workspace-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: inherit;
 }
 
 .breadcrumb-sep {
@@ -131,10 +154,52 @@ input {
     font-size: 13px;
 }
 
+.breadcrumb-project-wrap {
+    position: relative;
+}
+
 .breadcrumb-project {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 4px 8px;
+    border-radius: var(--r-md);
+    background: none;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.breadcrumb-project:hover,
+.breadcrumb-project[aria-expanded="true"] {
+    background: var(--bg);
+}
+
+.breadcrumb-project-name {
     font-size: 14px;
     font-weight: 600;
     color: var(--ink);
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.breadcrumb-project[aria-expanded="true"] .selector-chevron {
+    transform: rotate(180deg);
+}
+
+/* Project dropdown anchored under the breadcrumb project name */
+.breadcrumb-project-wrap .project-dropdown {
+    inset-inline-start: 0;
+    inset-inline-end: auto;
+    width: 280px;
+    max-width: 80vw;
+    top: calc(100% + 6px);
+}
+
+.breadcrumb-project-wrap .mine-only-toggle {
+    margin: 8px 8px 0;
+    width: calc(100% - 16px);
 }
 
 .topbar-search-wrap {
@@ -589,11 +654,125 @@ input {
     border-color: var(--blue);
 }
 
+/* Collapsible sidebar sections (project info / members) */
+.sidebar-section {
+    border-bottom: 1px solid var(--line);
+    flex-shrink: 0;
+}
+
+.sidebar-section-header {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 12px 16px;
+    background: none;
+    cursor: pointer;
+    text-align: start;
+    transition: background 0.12s;
+}
+
+.sidebar-section-header:hover {
+    background: #f7f9fc;
+}
+
+.sidebar-section-title {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--ink-f);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.sidebar-section-chevron {
+    flex-shrink: 0;
+    color: var(--ink-f);
+    transition: transform 0.2s;
+}
+
+.sidebar-section.collapsed .sidebar-section-chevron {
+    transform: rotate(-90deg);
+}
+
+.sidebar-section-body {
+    padding: 0 16px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.sidebar-section.collapsed .sidebar-section-body {
+    display: none;
+}
+
+.project-info-desc {
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--ink-s);
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.project-info-desc-empty {
+    color: var(--ink-f);
+    font-style: italic;
+}
+
+.project-info-settings-btn {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 10px;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    color: var(--ink-s);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.project-info-settings-btn:hover {
+    border-color: var(--blue);
+    color: var(--blue);
+    background: #f0f7ff;
+}
+
+/* Members in sidebar */
+.project-member-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 2px 0;
+}
+
+.project-member-name {
+    flex: 1;
+    font-size: 12.5px;
+    color: var(--ink-s);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.project-member-owner {
+    flex-shrink: 0;
+    font-size: 9.5px;
+    font-weight: 700;
+    color: var(--blue-d);
+    background: var(--blue-bg);
+    padding: 1px 6px;
+    border-radius: 6px;
+    letter-spacing: 0.3px;
+}
+
 /* Project Details Panel */
 .project-details {
     flex: 1;
     overflow-y: auto;
-    margin-top: 10px;
+    margin-top: 0;
 }
 
 .project-details-empty {
@@ -2003,7 +2182,7 @@ input {
         flex-wrap: wrap;
     }
 
-    .breadcrumb-label,
+    .breadcrumb-workspace-name,
     .topbar-divider {
         display: none;
     }

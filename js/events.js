@@ -2,6 +2,7 @@
 document.addEventListener('DOMContentLoaded', async () => {
     await syncClientId();
     setupEventListeners();
+    renderWorkspaceUI();
     renderUserUI();
     migrateTaskOwnership();
     migrateMembersAndAssignees();
