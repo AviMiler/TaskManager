@@ -217,83 +217,92 @@ function closeManageTypesModal() {
 }
 
 // ===== Team management =====
+// All edits (renames, additions, deletions, reassignments) are staged in
+// memory and only written to storage when the user clicks "שמור". Closing
+// the modal (×) discards any unsaved changes.
 function openTeamModal() {
     closePopovers();
 
+    const me = getUser();
+    let working = getMembers().map(m => ({ ...m })); // staged roster
+    const removedIds = new Set();       // ids to delete on save
+    const renames = new Map();          // id -> new name
+    const newMembers = new Set();       // ids of not-yet-persisted members
+    const reassignments = new Map();    // removed member id -> new assigneeId or null
+
     const renderList = (container) => {
-        const me = getUser();
-        const members = getMembers().slice().sort((a, b) => (a.name || '').localeCompare(b.name || '', 'he'));
-        if (members.length === 0) {
+        const visible = working
+            .filter(m => !removedIds.has(String(m.id)))
+            .slice()
+            .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'he'));
+
+        if (visible.length === 0) {
             container.innerHTML = '<div style="color:var(--ink-f);font-size:13px;padding:12px 0;">אין אנשי צוות עדיין</div>';
             return;
         }
-        container.innerHTML = members.map(m => {
-            const ini = initials(m.name) || (m.name || '').substring(0, 2);
+        container.innerHTML = visible.map(m => {
+            const name = renames.get(String(m.id)) ?? m.name;
+            const ini = initials(name) || (name || '').substring(0, 2);
             const isMe = String(m.id) === String(me.id);
             return `
             <div class="team-row" data-member-id="${m.id}">
                 <div class="avatar avatar-sm" style="--hue:${m.hue};">${escapeHtml(ini)}</div>
-                <input type="text" class="field-input team-name-input" value="${escapeHtml(m.name)}" data-member-id="${m.id}">
+                <input type="text" class="field-input team-name-input" value="${escapeHtml(name)}" data-member-id="${m.id}">
                 ${isMe ? '<span class="team-me-badge">אני</span>' : ''}
                 <button class="manage-type-delete" type="button" data-del-member="${m.id}" aria-label="מחק" ${isMe ? 'disabled title="לא ניתן למחוק את עצמך"' : ''}>×</button>
             </div>`;
         }).join('');
 
         container.querySelectorAll('.team-name-input').forEach(input => {
-            const commit = () => {
-                const id = input.dataset.memberId;
-                const newName = input.value.trim();
-                const current = memberName(id);
-                if (!newName || newName === current) { input.value = current; return; }
-                renameMember(id, newName);
-                // Keep the profile in sync if I renamed myself.
-                if (String(id) === String(getUser().id)) {
-                    const u = getUser();
-                    saveUser({ name: newName, role: u.role, hue: u.hue });
-                }
-                renderList(container);
-                loadProjects();
-                rerenderCurrentView();
-            };
             input.addEventListener('keydown', e => { if (e.key === 'Enter') input.blur(); });
-            input.addEventListener('blur', commit);
+            input.addEventListener('blur', () => {
+                const id = String(input.dataset.memberId);
+                const m = working.find(x => String(x.id) === id);
+                const newName = input.value.trim();
+                const current = renames.get(id) ?? (m ? m.name : '');
+                if (!newName || newName === current) { input.value = current; return; }
+                renames.set(id, newName);
+            });
         });
 
         container.querySelectorAll('[data-del-member]').forEach(btn => {
             btn.addEventListener('click', async () => {
-                const id = btn.dataset.delMember;
-                const m = getMemberById(id);
+                const id = String(btn.dataset.delMember);
+                const m = working.find(x => String(x.id) === id);
                 if (!m) return;
-                const usedTasks = getAllTasks().filter(t => String(t.assigneeId) === String(id));
+                const displayName = renames.get(id) ?? m.name;
+
+                if (newMembers.has(id)) {
+                    // Not persisted yet - just drop it, no tasks can reference it.
+                    working = working.filter(x => String(x.id) !== id);
+                    newMembers.delete(id);
+                    renames.delete(id);
+                    renderList(container);
+                    return;
+                }
+
+                const usedTasks = getAllTasks().filter(t => String(t.assigneeId) === id);
                 if (usedTasks.length > 0) {
-                    const others = getMembers().filter(x => String(x.id) !== String(id));
+                    const others = working.filter(x => !removedIds.has(String(x.id)) && String(x.id) !== id);
                     const options = [
                         { value: '', label: 'ללא אחראי' },
-                        ...others.map(o => ({ value: o.id, label: o.name }))
+                        ...others.map(o => ({ value: o.id, label: renames.get(String(o.id)) ?? o.name }))
                     ];
                     const choice = await showSelect(
-                        `"${m.name}" מוגדר כאחראי ב-${usedTasks.length} משימות. בחר למי לשייך את המשימות לפני המחיקה:`,
+                        `"${displayName}" מוגדר כאחראי ב-${usedTasks.length} משימות. בחר למי לשייך את המשימות לפני המחיקה:`,
                         options,
                         'מחיקת איש צוות',
                         'מחק ושייך מחדש',
                         'ביטול'
                     );
                     if (choice === null) return;
-                    const newAssigneeId = choice || null;
-                    const newAssigneeName = newAssigneeId ? memberName(newAssigneeId) : '';
-                    saveTasks(getAllTasks().map(t =>
-                        String(t.assigneeId) === String(id)
-                            ? { ...t, assigneeId: newAssigneeId, assignee: newAssigneeName, updatedAt: new Date().toISOString() }
-                            : t
-                    ));
+                    reassignments.set(id, choice || null);
                 } else {
-                    const ok = await showConfirm(`למחוק את "${m.name}" מהצוות?`, 'מחיקת איש צוות', 'מחק', 'ביטול');
+                    const ok = await showConfirm(`למחוק את "${displayName}" מהצוות?`, 'מחיקת איש צוות', 'מחק', 'ביטול');
                     if (!ok) return;
                 }
-                removeMember(id);
+                removedIds.add(id);
                 renderList(container);
-                loadProjects();
-                rerenderCurrentView();
             });
         });
     };
@@ -318,7 +327,8 @@ function openTeamModal() {
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn-primary" type="button" data-action="closeTeamModal()">סגור</button>
+                <button class="btn-secondary" type="button" data-action="closeTeamModal()">ביטול</button>
+                <button class="btn-primary" type="button" id="saveTeamBtn">שמור</button>
             </div>
         </div>
     `;
@@ -334,16 +344,57 @@ function openTeamModal() {
     const doAdd = async () => {
         const name = nameInput.value.trim();
         if (!name) return;
-        if (getMembers().find(m => m.name === name)) {
+        const exists = working.some(m => !removedIds.has(String(m.id)) && (renames.get(String(m.id)) ?? m.name) === name);
+        if (exists) {
             await showAlert('איש צוות עם שם זה כבר קיים');
             return;
         }
-        addMember(name);
+        const id = newUniqueId(working.map(m => m.id));
+        working.push({ id, name, role: '', hue: nameHue(name) });
+        newMembers.add(String(id));
         nameInput.value = '';
         renderList(container);
     };
     addBtn.addEventListener('click', doAdd);
     nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') doAdd(); });
+
+    overlay.querySelector('#saveTeamBtn').addEventListener('click', () => {
+        // Apply removals first (with their task reassignments), so renames
+        // below don't bother touching members that are about to be deleted.
+        removedIds.forEach(id => {
+            if (reassignments.has(id)) {
+                const newAssigneeId = reassignments.get(id);
+                const newAssigneeName = newAssigneeId ? (renames.get(String(newAssigneeId)) ?? memberName(newAssigneeId)) : '';
+                saveTasks(getAllTasks().map(t =>
+                    String(t.assigneeId) === id
+                        ? { ...t, assigneeId: newAssigneeId, assignee: newAssigneeName, updatedAt: new Date().toISOString() }
+                        : t
+                ));
+            }
+            removeMember(id);
+        });
+
+        // New members that weren't deleted before save.
+        newMembers.forEach(id => {
+            if (removedIds.has(id)) return;
+            const m = working.find(x => String(x.id) === id);
+            if (m) upsertMember({ id: m.id, name: renames.get(id) ?? m.name, role: m.role, hue: m.hue });
+        });
+
+        // Renames for existing, non-removed, non-new members.
+        renames.forEach((newName, id) => {
+            if (removedIds.has(id) || newMembers.has(id)) return;
+            renameMember(id, newName);
+            if (id === String(me.id)) {
+                const u = getUser();
+                saveUser({ name: newName, role: u.role, hue: u.hue });
+            }
+        });
+
+        loadProjects();
+        rerenderCurrentView();
+        closeTeamModal();
+    });
 }
 
 function closeTeamModal() {
