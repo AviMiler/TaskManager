@@ -5,6 +5,17 @@ function migrateTaskOwnership() {
     tasks.forEach(t => {
         if (t.createdBy === undefined) { t.createdBy = 'unknown'; changed = true; }
         if (t.updatedAt === undefined) { t.updatedAt = t.createdAt || new Date().toISOString(); changed = true; }
+        // Older versions stored "due" as a formatted Hebrew display string
+        // (e.g. "5 ביוני") instead of an ISO date. Reconstruct the ISO date
+        // from the dueIn offset that was recorded at the time, relative to
+        // the day the task was last saved.
+        if (t.due && !/^\d{4}-\d{2}-\d{2}/.test(t.due) && typeof t.dueIn === 'number') {
+            const base = new Date(t.updatedAt || t.createdAt || Date.now());
+            base.setHours(0, 0, 0, 0);
+            base.setDate(base.getDate() + t.dueIn);
+            t.due = base.toISOString().slice(0, 10);
+            changed = true;
+        }
     });
     if (changed) localStorage.setItem(DB.tasks, JSON.stringify(tasks));
 }
