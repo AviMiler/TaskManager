@@ -7,7 +7,8 @@ const DB = {
     columns: 'tb_columns',
     taskTypes: 'tb_task_types',
     user: 'tb_user',
-    dailies: 'tb_dailies'
+    dailies: 'tb_dailies',
+    mineOnly: 'tb_mine_only'
 };
 
 const DEFAULT_USER = { name: 'דנה גולן', role: 'מנהל פרויקטים', hue: 200 };
@@ -22,6 +23,7 @@ let activeFilters = { priority: null, tag: null, assignee: null };
 let activeSort = 'created-desc'; // 'created-desc' | 'created-asc' | 'priority' | 'title' | 'due'
 let searchPageTerm = null;
 let searchPageFilters = { projectId: null, priority: null, state: null };
+let showMineOnly = localStorage.getItem(DB.mineOnly) === '1';
 
 // Hue palette for project dots
 const HUES = [230, 160, 40, 290, 0, 60, 120, 180, 260, 320];
@@ -364,6 +366,27 @@ function saveUser(user) {
     renderUserUI();
 }
 
+// Ownership check for the "show only mine" filter. An item is "mine" when its
+// stable owner id matches the current browser, or (for tasks) when it is
+// assigned to me by name. Legacy items with no owner id are treated as shared
+// so they never disappear from the board.
+function isMine(item, { includeAssignee = false } = {}) {
+    if (!item) return false;
+    const me = getUser();
+    if (!item.createdById) return true; // legacy / unowned — visible to everyone
+    if (item.createdById === me.id) return true;
+    if (includeAssignee && item.assignee && item.assignee === me.name) return true;
+    return false;
+}
+
+// Toggles the global "show only mine" filter and re-renders projects + tasks.
+function toggleMineOnly() {
+    showMineOnly = !showMineOnly;
+    localStorage.setItem(DB.mineOnly, showMineOnly ? '1' : '0');
+    loadProjects();
+    updateUI();
+}
+
 function renderUserUI() {
     const u = getUser();
     const ini = initials(u.name) || u.name.substring(0, 2);
@@ -508,9 +531,12 @@ async function addProject(name) {
         return;
     }
 
+    const user = getUser();
     const project = await store.projects.create({
         name: escapeHtml(name),
-        hueIdx: projects.length % HUES.length
+        hueIdx: projects.length % HUES.length,
+        createdBy: user.name,
+        createdById: user.id
     });
     loadProjects();
     document.getElementById('newProjectInput').value = '';
@@ -653,12 +679,22 @@ function restoreCurrentProject() {
 
 function loadProjects() {
     const list = document.getElementById('projectsList');
-    const projects = getProjects();
+    const allProjects = getProjects();
+    const projects = showMineOnly ? allProjects.filter(p => isMine(p)) : allProjects;
+
+    const toggle = document.getElementById('mineOnlyToggle');
+    if (toggle) {
+        toggle.classList.toggle('active', showMineOnly);
+        toggle.setAttribute('aria-checked', showMineOnly ? 'true' : 'false');
+    }
 
     list.innerHTML = '';
 
     if (projects.length === 0) {
-        list.innerHTML = '<div style="padding: 12px; text-align: center; color: var(--ink-f); font-size: 12px;">אין פרויקטים עדיין</div>';
+        const msg = showMineOnly && allProjects.length
+            ? 'אין פרויקטים שיצרת — בטל את "הצג רק שלי" כדי לראות הכל'
+            : 'אין פרויקטים עדיין';
+        list.innerHTML = `<div style="padding: 12px; text-align: center; color: var(--ink-f); font-size: 12px;">${msg}</div>`;
     } else {
         const cols = getColumns();
         const lastColId = cols.length ? cols[cols.length - 1].id : null;
@@ -768,7 +804,7 @@ function renderProjectDetails() {
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
                     <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
                 </svg>
-                <span>נוצר ${createdDate}</span>
+                <span>נוצר ${createdDate}${project.createdBy ? ` ע״י ${escapeHtml(project.createdBy)}` : ''}</span>
             </div>
         </div>
     `;
@@ -2190,6 +2226,7 @@ function renderList() {
 function applyFiltersAndSort(tasks) {
     let out = tasks.slice();
 
+    if (showMineOnly) out = out.filter(t => isMine(t, { includeAssignee: true }));
     if (activeFilters.priority) out = out.filter(t => t.priority === activeFilters.priority);
     if (activeFilters.tag) out = out.filter(t => t.tag === activeFilters.tag);
     if (activeFilters.assignee) out = out.filter(t => t.assignee === activeFilters.assignee);
