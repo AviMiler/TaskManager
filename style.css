@@ -311,6 +311,66 @@ input {
     max-height: 220px;
 }
 
+/* "Show only mine" toggle */
+.mine-only-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: calc(100% - 12px);
+    margin: 6px 6px 0;
+    padding: 7px 10px;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--ink-s);
+    transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+
+.mine-only-toggle:hover {
+    border-color: var(--line-h);
+}
+
+.mine-only-switch {
+    position: relative;
+    flex: none;
+    width: 30px;
+    height: 17px;
+    border-radius: 9px;
+    background: var(--line-h);
+    transition: background 0.15s;
+}
+
+.mine-only-switch::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    inset-inline-start: 2px;
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.25);
+    transition: transform 0.15s;
+}
+
+.mine-only-toggle.active {
+    background: var(--blue-bg);
+    border-color: var(--blue);
+    color: var(--blue-d);
+}
+
+.mine-only-toggle.active .mine-only-switch {
+    background: var(--blue);
+}
+
+.mine-only-toggle.active .mine-only-switch::after {
+    transform: translateX(-13px);
+}
+
 .project-item {
     display: flex;
     align-items: center;
