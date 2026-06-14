@@ -171,21 +171,21 @@ function openProjectSettings(id, event) {
 
         const available = allMembers.filter(m => !memberIds.includes(String(m.id)))
             .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'he'));
-        if (available.length) {
-            addSelectEl.innerHTML = available.map(m => `<option value="${m.id}">${escapeHtml(m.name)}</option>`).join('');
-            addSelectEl.style.display = '';
-            addBtnEl.style.display = '';
-        } else {
-            addSelectEl.innerHTML = '';
-            addSelectEl.style.display = 'none';
-            addBtnEl.style.display = 'none';
-        }
+        const opts = available.map(m => `<option value="${m.id}">${escapeHtml(m.name)}</option>`).join('');
+        addSelectEl.innerHTML = opts + '<option value="__new__">+ הוסף איש צוות חדש…</option>';
     };
 
-    addBtnEl.addEventListener('click', () => {
-        const val = addSelectEl.value;
+    addBtnEl.addEventListener('click', async () => {
+        let val = addSelectEl.value;
+        if (val === '__new__') {
+            const name = (await showPrompt('שם איש הצוות', '', 'הוספת חבר לפרויקט') || '').trim();
+            if (!name) return;
+            const member = addMember(name);
+            if (!member) return;
+            val = String(member.id);
+        }
         if (!val) return;
-        memberIds.push(val);
+        if (!memberIds.includes(val)) memberIds.push(val);
         renderMembers();
     });
 
@@ -222,6 +222,9 @@ function saveProjectSettings(id) {
     project.hueIdx = hueIdx;
     project.ownerId = ownerId;
     if (memberIds) project.memberIds = memberIds;
+    // Bump the timestamp so file-sync's merge-by-updatedAt keeps this edit
+    // instead of letting an older remote copy overwrite it on the next pull.
+    project.updatedAt = new Date().toISOString();
 
     saveProjects(projects);
     closeProjectSettings();
