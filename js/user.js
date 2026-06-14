@@ -27,14 +27,17 @@ function saveUser(user) {
 }
 
 // Ownership check for the "show only mine" filters. A project is "mine" when
-// its `ownerId` (set explicitly in project settings, defaulting to its
-// creator) matches the current user. A task is "mine" when its stable owner
-// id matches the current browser, or (when includeAssignee is set) when it is
-// assigned to me. Legacy items with no owner id are treated as shared so they
-// never disappear from the board.
+// its `memberIds` list includes the current user. Legacy projects without a
+// member list fall back to `ownerId`/creator. A task is "mine" when its
+// stable owner id matches the current browser, or (when includeAssignee is
+// set) when it is assigned to me. Legacy items with no owner id are treated
+// as shared so they never disappear from the board.
 function isMine(item, { includeAssignee = false } = {}) {
     if (!item) return false;
     const me = getUser();
+    if (Array.isArray(item.memberIds)) {
+        return item.memberIds.map(String).includes(String(me.id));
+    }
     if (item.ownerId !== undefined && item.ownerId !== null && item.ownerId !== '') {
         return String(item.ownerId) === String(me.id);
     }

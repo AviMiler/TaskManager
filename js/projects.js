@@ -26,7 +26,8 @@ async function addProject(name) {
         hueIdx: projects.length % HUES.length,
         createdBy: user.name,
         createdById: user.id,
-        ownerId: user.id
+        ownerId: user.id,
+        memberIds: [user.id]
     });
     loadProjects();
     document.getElementById('newProjectInput').value = '';
@@ -106,6 +107,14 @@ function openProjectSettings(id, event) {
                         })()}
                     </select>
                 </div>
+                <div class="field">
+                    <label class="field-label">חברי הפרויקט</label>
+                    <div id="projectMembersList"></div>
+                    <div style="display:flex; gap:6px; margin-top:6px;">
+                        <select id="projectAddMemberSelect" class="field-select"></select>
+                        <button class="btn-secondary" type="button" id="projectAddMemberBtn">הוסף</button>
+                    </div>
+                </div>
             </div>
             <div class="modal-footer">
                 <button class="btn-secondary" data-action="closeProjectSettings()">ביטול</button>
@@ -124,6 +133,63 @@ function openProjectSettings(id, event) {
             this.classList.add('selected');
         });
     });
+
+    // ===== Project members (staged) =====
+    const me = getUser();
+    const defaultOwnerId = project.ownerId ?? project.createdById;
+    let memberIds = (Array.isArray(project.memberIds) && project.memberIds.length)
+        ? project.memberIds.map(String)
+        : [defaultOwnerId, me.id].filter(Boolean).map(String);
+    memberIds = [...new Set(memberIds)];
+    overlay._getMemberIds = () => memberIds;
+
+    const membersListEl = overlay.querySelector('#projectMembersList');
+    const addSelectEl = overlay.querySelector('#projectAddMemberSelect');
+    const addBtnEl = overlay.querySelector('#projectAddMemberBtn');
+
+    const renderMembers = () => {
+        const allMembers = getMembers();
+        membersListEl.innerHTML = memberIds.map(mid => {
+            const m = allMembers.find(x => String(x.id) === mid);
+            const name = m ? m.name : mid;
+            const ini = initials(name) || (name || '').substring(0, 2);
+            const isMe = mid === String(me.id);
+            return `
+            <div class="team-row" data-member-id="${escapeAttr(mid)}">
+                <div class="avatar avatar-sm" style="--hue:${m ? m.hue : 200};">${escapeHtml(ini)}</div>
+                <span class="user-name">${escapeHtml(name)}${isMe ? ' <span class="team-me-badge">אני</span>' : ''}</span>
+                <button class="manage-type-delete" type="button" data-remove-member="${escapeAttr(mid)}" aria-label="הסר">×</button>
+            </div>`;
+        }).join('');
+
+        membersListEl.querySelectorAll('[data-remove-member]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                memberIds = memberIds.filter(mid => mid !== btn.dataset.removeMember);
+                renderMembers();
+            });
+        });
+
+        const available = allMembers.filter(m => !memberIds.includes(String(m.id)))
+            .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'he'));
+        if (available.length) {
+            addSelectEl.innerHTML = available.map(m => `<option value="${m.id}">${escapeHtml(m.name)}</option>`).join('');
+            addSelectEl.style.display = '';
+            addBtnEl.style.display = '';
+        } else {
+            addSelectEl.innerHTML = '';
+            addSelectEl.style.display = 'none';
+            addBtnEl.style.display = 'none';
+        }
+    };
+
+    addBtnEl.addEventListener('click', () => {
+        const val = addSelectEl.value;
+        if (!val) return;
+        memberIds.push(val);
+        renderMembers();
+    });
+
+    renderMembers();
 }
 
 function closeProjectSettings() {
@@ -143,6 +209,8 @@ function saveProjectSettings(id) {
     const selectedSwatch = document.querySelector('.color-swatch.selected');
     const hueIdx = selectedSwatch ? parseInt(selectedSwatch.dataset.hueIdx) : 0;
     const ownerId = document.getElementById('projectOwner').value;
+    const overlay = document.getElementById('projectSettingsModal');
+    const memberIds = overlay && overlay._getMemberIds ? overlay._getMemberIds() : null;
 
     const projects = getProjects();
     const project = projects.find(p => p.id === id);
@@ -153,6 +221,7 @@ function saveProjectSettings(id) {
     project.status = status;
     project.hueIdx = hueIdx;
     project.ownerId = ownerId;
+    if (memberIds) project.memberIds = memberIds;
 
     saveProjects(projects);
     closeProjectSettings();
