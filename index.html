@@ -145,7 +145,29 @@
     <script src="store/HttpStore.js"></script>
     <script src="store/index.js"></script>
     <script src="fsSync.js"></script>
-    <script src="script.js"></script>
+    <!-- App code, split from the former monolithic script.js into focused
+         modules. Loaded as plain (non-module) scripts so they share one global
+         scope exactly as before. Order matters only for: state.js first
+         (defines shared constants/state) and globals.js last (exposes the
+         already-defined functions on window). -->
+    <script src="js/state.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/dialogs.js"></script>
+    <script src="js/storage.js"></script>
+    <script src="js/user.js"></script>
+    <script src="js/projects.js"></script>
+    <script src="js/links.js"></script>
+    <script src="js/tasks.js"></script>
+    <script src="js/kanban.js"></script>
+    <script src="js/modal.js"></script>
+    <script src="js/daily.js"></script>
+    <script src="js/search.js"></script>
+    <script src="js/filters.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/menus.js"></script>
+    <script src="js/settings.js"></script>
+    <script src="js/events.js"></script>
+    <script src="js/globals.js"></script>
     <!-- CSP-safe replacement for inline onclick="" handlers (see actions.js). -->
     <script src="actions.js"></script>
 </body>
