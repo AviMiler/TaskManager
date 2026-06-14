@@ -264,16 +264,31 @@ function openTeamModal() {
                 const id = btn.dataset.delMember;
                 const m = getMemberById(id);
                 if (!m) return;
-                const used = getAllTasks().filter(t => String(t.assigneeId) === String(id)).length;
-                const msg = used > 0
-                    ? `"${m.name}" מוגדר כאחראי ב-${used} משימות. למחוק את איש הצוות? המשימות יישארו ללא אחראי.`
-                    : `למחוק את "${m.name}" מהצוות?`;
-                const ok = await showConfirm(msg, 'מחיקת איש צוות', 'מחק', 'ביטול');
-                if (!ok) return;
-                if (used > 0) {
+                const usedTasks = getAllTasks().filter(t => String(t.assigneeId) === String(id));
+                if (usedTasks.length > 0) {
+                    const others = getMembers().filter(x => String(x.id) !== String(id));
+                    const options = [
+                        { value: '', label: 'ללא אחראי' },
+                        ...others.map(o => ({ value: o.id, label: o.name }))
+                    ];
+                    const choice = await showSelect(
+                        `"${m.name}" מוגדר כאחראי ב-${usedTasks.length} משימות. בחר למי לשייך את המשימות לפני המחיקה:`,
+                        options,
+                        'מחיקת איש צוות',
+                        'מחק ושייך מחדש',
+                        'ביטול'
+                    );
+                    if (choice === null) return;
+                    const newAssigneeId = choice || null;
+                    const newAssigneeName = newAssigneeId ? memberName(newAssigneeId) : '';
                     saveTasks(getAllTasks().map(t =>
-                        String(t.assigneeId) === String(id) ? { ...t, assigneeId: null, assignee: '', updatedAt: new Date().toISOString() } : t
+                        String(t.assigneeId) === String(id)
+                            ? { ...t, assigneeId: newAssigneeId, assignee: newAssigneeName, updatedAt: new Date().toISOString() }
+                            : t
                     ));
+                } else {
+                    const ok = await showConfirm(`למחוק את "${m.name}" מהצוות?`, 'מחיקת איש צוות', 'מחק', 'ביטול');
+                    if (!ok) return;
                 }
                 removeMember(id);
                 renderList(container);

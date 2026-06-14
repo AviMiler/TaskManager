@@ -1,5 +1,5 @@
 // ===== Custom Dialogs =====
-function _buildDialog({ title, message, inputDefault, buttons }) {
+function _buildDialog({ title, message, inputDefault, selectOptions, selectDefault, buttons }) {
     return new Promise(resolve => {
         const overlay = document.createElement('div');
         overlay.className = 'dialog-overlay';
@@ -14,11 +14,17 @@ function _buildDialog({ title, message, inputDefault, buttons }) {
         const inputEl = inputDefault !== undefined
             ? `<input id="dialogInput" class="dialog-input field-input" type="text" value="${escapeHtml(inputDefault)}">`
             : '';
+        const selectEl = selectOptions
+            ? `<select id="dialogSelect" class="dialog-input field-input">${selectOptions.map(o =>
+                `<option value="${escapeAttr(o.value)}" ${String(o.value) === String(selectDefault) ? 'selected' : ''}>${escapeHtml(o.label)}</option>`
+              ).join('')}</select>`
+            : '';
 
         box.innerHTML = `
             ${titleEl}
             ${msgEl}
             ${inputEl}
+            ${selectEl}
             <div class="dialog-btns"></div>
         `;
 
@@ -30,7 +36,9 @@ function _buildDialog({ title, message, inputDefault, buttons }) {
             btn.textContent = label;
             btn.addEventListener('click', () => {
                 overlay.remove();
-                if (inputDefault !== undefined) {
+                if (selectOptions) {
+                    resolve(value === true ? box.querySelector('#dialogSelect').value : null);
+                } else if (inputDefault !== undefined) {
                     resolve(value === true ? box.querySelector('#dialogInput').value : null);
                 } else {
                     resolve(value);
@@ -43,11 +51,17 @@ function _buildDialog({ title, message, inputDefault, buttons }) {
         document.body.appendChild(overlay);
 
         const input = box.querySelector('#dialogInput');
+        const select = box.querySelector('#dialogSelect');
         if (input) {
             input.focus();
             input.select();
             input.addEventListener('keydown', e => {
                 if (e.key === 'Enter') btnsEl.querySelector('.btn-primary')?.click();
+                if (e.key === 'Escape') btnsEl.querySelector('.btn-secondary')?.click();
+            });
+        } else if (select) {
+            select.focus();
+            overlay.addEventListener('keydown', e => {
                 if (e.key === 'Escape') btnsEl.querySelector('.btn-secondary')?.click();
             });
         } else {
@@ -71,6 +85,19 @@ function showConfirm(message, title, okLabel = 'אישור', cancelLabel = 'בי
     return _buildDialog({
         title,
         message,
+        buttons: [
+            { label: cancelLabel, value: false, primary: false },
+            { label: okLabel,     value: true,  primary: true  }
+        ]
+    });
+}
+
+function showSelect(message, options, title, okLabel = 'אישור', cancelLabel = 'ביטול') {
+    return _buildDialog({
+        title,
+        message,
+        selectOptions: options,
+        selectDefault: options[0] && options[0].value,
         buttons: [
             { label: cancelLabel, value: false, primary: false },
             { label: okLabel,     value: true,  primary: true  }
