@@ -2,7 +2,7 @@
 function applyFiltersAndSort(tasks) {
     let out = tasks.slice();
 
-    if (showMineOnly) out = out.filter(t => isMine(t, { includeAssignee: true }));
+    if (tasksMineOnly) out = out.filter(t => isMine(t, { includeAssignee: true }));
     if (activeFilters.priority) out = out.filter(t => t.priority === activeFilters.priority);
     if (activeFilters.tag) out = out.filter(t => t.tag === activeFilters.tag);
     if (activeFilters.assignee) out = out.filter(t => t.assignee === activeFilters.assignee);
@@ -37,6 +37,12 @@ function openFilterMenu(anchor) {
     pop.id = 'activePopover';
     pop.innerHTML = `
         <div class="popover-title">סינון</div>
+        <div class="popover-section">
+            <button class="mine-only-toggle ${tasksMineOnly ? 'active' : ''}" type="button" role="switch" aria-checked="${tasksMineOnly}" data-action="toggleTasksMineOnly()">
+                <span class="mine-only-switch"></span>
+                <span class="mine-only-label">הצג רק את המשימות שלי</span>
+            </button>
+        </div>
         <div class="popover-section">
             <div class="popover-label">תעדוף</div>
             <div class="popover-row">
@@ -141,7 +147,7 @@ function setSort(sort) {
 }
 
 function updateFilterBadge() {
-    const active = Object.values(activeFilters).filter(Boolean).length;
+    const active = Object.values(activeFilters).filter(Boolean).length + (tasksMineOnly ? 1 : 0);
     const btn = document.querySelector('.header-btn-filter');
     if (btn) {
         const existing = btn.querySelector('.filter-badge');

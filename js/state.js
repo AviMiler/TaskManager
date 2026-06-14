@@ -9,6 +9,7 @@ const DB = {
     user: 'tb_user',
     dailies: 'tb_dailies',
     mineOnly: 'tb_mine_only',
+    tasksMineOnly: 'tb_tasks_mine_only',
     members: 'tb_members',
     membersMigrated: 'tb_members_migrated'
 };
@@ -26,6 +27,7 @@ let activeSort = 'created-desc'; // 'created-desc' | 'created-asc' | 'priority' 
 let searchPageTerm = null;
 let searchPageFilters = { projectId: null, priority: null, state: null };
 let showMineOnly = localStorage.getItem(DB.mineOnly) === '1';
+let tasksMineOnly = localStorage.getItem(DB.tasksMineOnly) === '1';
 let mandatoryProfileOpen = false;
 
 // Hue palette for project dots

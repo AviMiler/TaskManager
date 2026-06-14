@@ -25,7 +25,8 @@ async function addProject(name) {
         name: escapeHtml(name),
         hueIdx: projects.length % HUES.length,
         createdBy: user.name,
-        createdById: user.id
+        createdById: user.id,
+        ownerId: user.id
     });
     loadProjects();
     document.getElementById('newProjectInput').value = '';
@@ -94,6 +95,17 @@ function openProjectSettings(id, event) {
                         <option value="archived" ${project.status === 'archived' ? 'selected' : ''}>בארכיון</option>
                     </select>
                 </div>
+                <div class="field">
+                    <label class="field-label">שייך ל</label>
+                    <select id="projectOwner" class="field-select">
+                        ${(() => {
+                            const ownerId = project.ownerId ?? project.createdById;
+                            return getMembers().slice().sort((a, b) => (a.name || '').localeCompare(b.name || '', 'he'))
+                                .map(m => `<option value="${m.id}" ${String(ownerId) === String(m.id) ? 'selected' : ''}>${escapeHtml(m.name)}</option>`)
+                                .join('');
+                        })()}
+                    </select>
+                </div>
             </div>
             <div class="modal-footer">
                 <button class="btn-secondary" data-action="closeProjectSettings()">ביטול</button>
@@ -130,6 +142,7 @@ function saveProjectSettings(id) {
     const status = document.getElementById('projectStatus').value;
     const selectedSwatch = document.querySelector('.color-swatch.selected');
     const hueIdx = selectedSwatch ? parseInt(selectedSwatch.dataset.hueIdx) : 0;
+    const ownerId = document.getElementById('projectOwner').value;
 
     const projects = getProjects();
     const project = projects.find(p => p.id === id);
@@ -139,6 +152,7 @@ function saveProjectSettings(id) {
     project.description = escapeHtml(description);
     project.status = status;
     project.hueIdx = hueIdx;
+    project.ownerId = ownerId;
 
     saveProjects(projects);
     closeProjectSettings();

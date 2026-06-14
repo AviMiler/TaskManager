@@ -338,6 +338,10 @@ input {
     background: var(--surface);
 }
 
+.project-selector > .mine-only-toggle {
+    margin-top: 8px;
+}
+
 .project-selector-name {
     flex: 1;
     overflow: hidden;
@@ -388,8 +392,8 @@ input {
     display: flex;
     align-items: center;
     gap: 8px;
-    width: calc(100% - 12px);
-    margin: 6px 6px 0;
+    width: 100%;
+    margin: 0;
     padding: 7px 10px;
     background: var(--bg);
     border: 1px solid var(--line);

@@ -26,13 +26,18 @@ function saveUser(user) {
     rerenderCurrentView();
 }
 
-// Ownership check for the "show only mine" filter. An item is "mine" when its
-// stable owner id matches the current browser, or (for tasks) when it is
-// assigned to me by name. Legacy items with no owner id are treated as shared
-// so they never disappear from the board.
+// Ownership check for the "show only mine" filters. A project is "mine" when
+// its `ownerId` (set explicitly in project settings, defaulting to its
+// creator) matches the current user. A task is "mine" when its stable owner
+// id matches the current browser, or (when includeAssignee is set) when it is
+// assigned to me. Legacy items with no owner id are treated as shared so they
+// never disappear from the board.
 function isMine(item, { includeAssignee = false } = {}) {
     if (!item) return false;
     const me = getUser();
+    if (item.ownerId !== undefined && item.ownerId !== null && item.ownerId !== '') {
+        return String(item.ownerId) === String(me.id);
+    }
     if (!item.createdById) return true; // legacy / unowned — visible to everyone
     if (item.createdById === me.id) return true;
     if (includeAssignee) {
@@ -42,12 +47,21 @@ function isMine(item, { includeAssignee = false } = {}) {
     return false;
 }
 
-// Toggles the global "show only mine" filter and re-renders projects + tasks.
+// Toggles the "show only my projects" filter and re-renders the project list.
 function toggleMineOnly() {
     showMineOnly = !showMineOnly;
     localStorage.setItem(DB.mineOnly, showMineOnly ? '1' : '0');
     loadProjects();
     updateUI();
+}
+
+// Toggles the "show only my tasks" filter for the current project's board/list.
+function toggleTasksMineOnly() {
+    tasksMineOnly = !tasksMineOnly;
+    localStorage.setItem(DB.tasksMineOnly, tasksMineOnly ? '1' : '0');
+    rerenderCurrentView();
+    updateFilterBadge();
+    closePopovers();
 }
 
 function renderUserUI() {
