@@ -68,6 +68,7 @@ function renameMember(id, newName) {
 
 function removeMember(id) {
     saveMembers(getMembers().filter(m => String(m.id) !== String(id)));
+    if (window.FSSync) FSSync.recordMemberTombstone(id);
 }
 
 // Rewrite the cached name on every task that points at this member, so the
