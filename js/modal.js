@@ -103,24 +103,8 @@ function buildModal(task, isNew, defaultColumnId) {
 
     overlay.addEventListener("click", (e) => { if (e.target === overlay) closeModal(); });
 
-    // Assignee dropdown: support adding a new team member inline.
-    const assigneeSel = overlay.querySelector('#modalAssignee');
-    if (assigneeSel) {
-        let lastValue = assigneeSel.value;
-        assigneeSel.addEventListener('change', async () => {
-            if (assigneeSel.value === '__add__') {
-                const name = await showPrompt('שם איש הצוות החדש:', '', 'הוסף איש צוות');
-                if (name && name.trim()) {
-                    const m = addMember(name.trim());
-                    assigneeSel.innerHTML = assigneeOptionsHtml(m.id);
-                } else {
-                    assigneeSel.value = lastValue;
-                }
-            }
-            lastValue = assigneeSel.value;
-        });
-    }
-
+    // The assignee dropdown lists only people who have registered themselves;
+    // there is no inline "add a person" anymore.
     return overlay;
 }
 
@@ -158,8 +142,7 @@ async function saveTaskFromModal(taskId) {
     const dueInfo = formatDueDate(isoDate);
 
     const assigneeSel = document.getElementById('modalAssignee');
-    const assigneeId = assigneeSel && assigneeSel.value && assigneeSel.value !== '__add__'
-        ? assigneeSel.value : '';
+    const assigneeId = assigneeSel && assigneeSel.value ? assigneeSel.value : '';
     const assigneeName = assigneeId ? memberName(assigneeId) : '';
 
     const data = {

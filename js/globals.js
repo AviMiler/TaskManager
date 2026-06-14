@@ -14,6 +14,7 @@ window.openDailyModal = openDailyModal;
 window.closeDailyModal = closeDailyModal;
 window.openUserProfileModal = openUserProfileModal;
 window.saveUserFromModal = saveUserFromModal;
+window.logout = logout;
 window.setFilter = setFilter;
 window.setSort = setSort;
 window.clearFilters = clearFilters;

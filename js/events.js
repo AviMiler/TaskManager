@@ -5,11 +5,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderWorkspaceUI();
     renderUserUI();
     migrateTaskOwnership();
-    migrateMembersAndAssignees();
+    // These seed/relink the roster from the logged-in person, so only run them
+    // once somebody is actually logged in.
+    if (isLoggedIn()) migrateMembersAndAssignees();
     loadProjects();
     restoreCurrentProject();
 
-    if (!localStorage.getItem(DB.user)) {
+    // Identity is required: no national id => show the mandatory login screen.
+    if (!isLoggedIn()) {
         openUserProfileModal(true);
     }
 

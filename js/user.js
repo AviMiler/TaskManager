@@ -141,10 +141,61 @@ function renderSyncStatusUI() {
     dot.title = FSSync.getStatusLabel();
 }
 
+// Log in as a national id (תז): set identity, migrate legacy refs once, and
+// make sure a roster record exists for this person. `profile` carries the
+// name/role/hue from the login form (used when the id is brand new or edited).
+function login(nationalId, profile) {
+    setIdentity(nationalId);
+    migrateLegacyIdentity(nationalId);
+    if (profile) {
+        localStorage.setItem(DB.user, JSON.stringify({
+            name: profile.name, role: profile.role, hue: profile.hue
+        }));
+    }
+    const u = getUser();
+    upsertMember({ id: u.id, name: u.name, role: u.role, hue: u.hue });
+    propagateMemberName(u.id);
+    migrateMembersAndAssignees();
+    renderUserUI();
+}
+
+// Log out and return to the login screen. Clears only the "who am I" pointer
+// and this browser's cached profile — the shared roster and all data stay put,
+// so logging back in (here or with another id) restores everything.
+async function logout() {
+    const ok = await showConfirm('להתנתק? תוכל להתחבר שוב עם תעודת זהות.', 'התנתקות', 'התנתק', 'ביטול');
+    if (!ok) return;
+    clearIdentity();
+    localStorage.removeItem(DB.user);
+    location.reload();
+}
+
 function openUserProfileModal(mandatory = false) {
     closePopovers();
+    const loggedIn = isLoggedIn();
     const u = getUser();
+    const myId = getClientId();
     mandatoryProfileOpen = !!mandatory;
+
+    // When logging in there is no "current user" yet, so start the form blank
+    // instead of showing the placeholder default profile.
+    const initName = loggedIn ? u.name : '';
+    const initRole = loggedIn ? u.role : '';
+    const initHue = loggedIn ? u.hue : 200;
+
+    // When logged in the national id is fixed (changing it = switching person,
+    // which is what logout/login is for), so show it read-only. When logging in
+    // it's the primary, editable field.
+    const idFieldHtml = loggedIn
+        ? `<div class="field">
+                <label class="field-label">תעודת זהות</label>
+                <input type="text" class="field-input" value="${escapeHtml(maskNationalId(myId))}" disabled dir="ltr">
+           </div>`
+        : `<div class="field">
+                <label class="field-label">תעודת זהות *</label>
+                <input type="text" id="userNationalId" class="field-input" inputmode="numeric" dir="ltr" placeholder="מספר תעודת זהות" autocomplete="off">
+                <div class="field-hint" id="userIdHint"></div>
+           </div>`;
 
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
@@ -152,51 +203,56 @@ function openUserProfileModal(mandatory = false) {
     overlay.innerHTML = `
         <div class="modal" data-action="event.stopPropagation()">
             <div class="modal-header">
-                <h2 class="modal-title">פרטי המשתמש</h2>
+                <h2 class="modal-title">${loggedIn ? 'פרטי המשתמש' : 'כניסה למערכת'}</h2>
                 ${mandatory ? '' : '<button class="modal-close" type="button" aria-label="סגור" data-action="closeModal()">×</button>'}
             </div>
-            ${mandatory ? '<div class="modal-intro">ברוך הבא! הזן שם כדי שהמשימות והפרויקטים שתיצור ישויכו אליך.</div>' : ''}
+            ${!loggedIn ? '<div class="modal-intro">הזן תעודת זהות כדי להיכנס. אם זו הכניסה הראשונה שלך, הוסף גם שם. כך כל המשימות והפרויקטים משויכים אליך — בכל דפדפן.</div>' : ''}
             <div class="modal-body">
+                ${idFieldHtml}
                 <div class="field">
                     <label class="field-label">שם מלא *</label>
-                    <input type="text" id="userName" class="field-input" value="${escapeHtml(u.name)}" placeholder="שם פרטי ושם משפחה">
+                    <input type="text" id="userName" class="field-input" value="${escapeHtml(initName)}" placeholder="שם פרטי ושם משפחה">
                 </div>
                 <div class="field">
                     <label class="field-label">תפקיד</label>
-                    <input type="text" id="userRole" class="field-input" value="${escapeHtml(u.role)}" placeholder="מנהל פרויקטים, מפתח...">
+                    <input type="text" id="userRole" class="field-input" value="${escapeHtml(initRole)}" placeholder="מנהל פרויקטים, מפתח...">
                 </div>
                 <div class="field">
-                    <label class="field-label">צבע (גוון) — ${u.hue}°</label>
-                    <input type="range" id="userHue" class="field-input" min="0" max="360" step="1" value="${u.hue}">
+                    <label class="field-label">צבע (גוון) — ${initHue}°</label>
+                    <input type="range" id="userHue" class="field-input" min="0" max="360" step="1" value="${initHue}">
                     <div class="user-preview">
-                        <div class="avatar avatar-lg" id="userPreviewAvatar" style="--hue: ${u.hue};">${escapeHtml(initials(u.name) || 'אא')}</div>
+                        <div class="avatar avatar-lg" id="userPreviewAvatar" style="--hue: ${initHue};">${escapeHtml(initials(initName) || 'אא')}</div>
                         <div>
-                            <div class="user-name" id="userPreviewName">${escapeHtml(u.name)}</div>
-                            <div class="user-role" id="userPreviewRole">${escapeHtml(u.role)}</div>
+                            <div class="user-name" id="userPreviewName">${escapeHtml(initName) || '—'}</div>
+                            <div class="user-role" id="userPreviewRole">${escapeHtml(initRole)}</div>
                         </div>
                     </div>
                 </div>
             </div>
             <div class="modal-footer">
-                ${mandatory ? '' : '<button class="btn-secondary" type="button" data-action="closeModal()">ביטול</button>'}
-                <button class="btn-primary" type="button" data-action="saveUserFromModal()">שמור</button>
+                ${loggedIn ? '<button class="btn-secondary btn-logout" type="button" data-action="logout()">התנתק / החלף חשבון</button>' : ''}
+                <div style="margin-inline-start:auto; display:flex; gap:8px;">
+                    ${mandatory ? '' : '<button class="btn-secondary" type="button" data-action="closeModal()">ביטול</button>'}
+                    <button class="btn-primary" type="button" data-action="saveUserFromModal()">${loggedIn ? 'שמור' : 'כניסה'}</button>
+                </div>
             </div>
         </div>
     `;
-    // Only allow dismiss-by-backdrop when the profile already exists. The
-    // first-time setup is mandatory so a stray click can't discard it.
+    // Only allow dismiss-by-backdrop when already logged in. The first-time
+    // login is mandatory so a stray click can't discard it.
     if (!mandatory) {
         overlay.addEventListener("click", (e) => { if (e.target === overlay) closeModal(); });
     }
     document.body.appendChild(overlay);
 
+    const idInput = overlay.querySelector('#userNationalId');
+    const idHint = overlay.querySelector('#userIdHint');
     const nameInput = overlay.querySelector('#userName');
     const roleInput = overlay.querySelector('#userRole');
     const hueInput = overlay.querySelector('#userHue');
     const previewAvatar = overlay.querySelector('#userPreviewAvatar');
     const previewName = overlay.querySelector('#userPreviewName');
     const previewRole = overlay.querySelector('#userPreviewRole');
-    const hueLabel = overlay.querySelector('.field-label + input + .user-preview')?.previousElementSibling?.previousElementSibling;
 
     const refreshPreview = () => {
         previewAvatar.textContent = initials(nameInput.value) || (nameInput.value || 'אא').substring(0, 2);
@@ -208,20 +264,68 @@ function openUserProfileModal(mandatory = false) {
     roleInput.addEventListener('input', refreshPreview);
     hueInput.addEventListener('input', () => {
         refreshPreview();
-        const lbl = overlay.querySelector('label[for="userHue"]') ||
-            overlay.querySelectorAll('.field-label')[2];
+        // Fields are always: id, name, role, hue → the colour label is index 3.
+        const lbl = overlay.querySelectorAll('.field-label')[3];
         if (lbl) lbl.textContent = `צבע (גוון) — ${hueInput.value}°`;
     });
 
-    setTimeout(() => nameInput.focus(), 50);
+    // While logging in: when the typed id is already known, prefill the person's
+    // name/role/colour so they really only need to type the number ("just the
+    // id on a new browser"). Also surface a soft validity hint.
+    if (idInput) {
+        idInput.addEventListener('input', () => {
+            const tz = normalizeNationalId(idInput.value);
+            if (idInput.value !== tz) idInput.value = tz;
+            const known = tz ? getMemberById(tz) : null;
+            if (known) {
+                nameInput.value = known.name || '';
+                roleInput.value = known.role || '';
+                if (known.hue !== undefined && known.hue !== null) {
+                    hueInput.value = known.hue;
+                }
+                refreshPreview();
+                idHint.textContent = `מזוהה: ${known.name}`;
+                idHint.className = 'field-hint field-hint-ok';
+            } else if (tz && tz.length >= 5 && !isValidIsraeliId(tz)) {
+                idHint.textContent = 'תעודת הזהות אינה תקינה (ספרת ביקורת) — אפשר להמשיך בכל זאת';
+                idHint.className = 'field-hint field-hint-warn';
+            } else {
+                idHint.textContent = '';
+                idHint.className = 'field-hint';
+            }
+        });
+    }
+
+    setTimeout(() => (idInput || nameInput).focus(), 50);
 }
 
 async function saveUserFromModal() {
+    const loggedIn = isLoggedIn();
+    const idInput = document.getElementById('userNationalId');
+
+    let nationalId = getClientId();
+    if (!loggedIn) {
+        nationalId = normalizeNationalId(idInput ? idInput.value : '');
+        if (!nationalId) { await showAlert('תעודת זהות חובה'); return; }
+        if (!isValidIsraeliId(nationalId)) {
+            const ok = await showConfirm('תעודת הזהות אינה תקינה (ספרת ביקורת). להמשיך בכל זאת?', 'אזהרה', 'המשך', 'תיקון');
+            if (!ok) return;
+        }
+    }
+
     const name = document.getElementById('userName').value.trim();
     if (!name) { await showAlert('שם חובה'); return; }
     const role = document.getElementById('userRole').value.trim();
     const hue = parseInt(document.getElementById('userHue').value, 10) || 0;
-    saveUser({ name, role, hue });
+
+    if (!loggedIn) {
+        login(nationalId, { name, role, hue });
+    } else {
+        saveUser({ name, role, hue });
+    }
+
     mandatoryProfileOpen = false;
     closeModal();
+    loadProjects();
+    updateUI();
 }

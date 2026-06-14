@@ -12,7 +12,9 @@ const DB = {
     tasksMineOnly: 'tb_tasks_mine_only',
     members: 'tb_members',
     membersMigrated: 'tb_members_migrated',
-    workspace: 'tb_workspace'
+    workspace: 'tb_workspace',
+    identity: 'tb_identity',
+    identityMigrated: 'tb_identity_migrated'
 };
 
 const DEFAULT_USER = { name: 'דנה גולן', role: 'מנהל פרויקטים', hue: 200 };

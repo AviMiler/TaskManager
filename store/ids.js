@@ -3,41 +3,42 @@
 // These helpers let several people edit the same shared JSON file without
 // id collisions, and give every browser a stable owner id for task ownership.
 
-const ID_CLIENT_KEY = 'tb_client_id';
+const ID_IDENTITY_KEY = 'tb_identity';   // the national id (תעודת זהות) of whoever is logged in here
+const ID_CLIENT_KEY = 'tb_client_id';    // legacy random per-browser id — read only for one-time migration
 
-// A stable identifier. Generated once and persisted in localStorage. Used
-// as the owner id for tasks (createdById) so ownership survives
-// display-name changes, and as the basis for "who am I" checks.
-// When a real HTTP backend arrives this is replaced by the authenticated
-// user id with no call-site change.
+// "Who am I" = the national id the person typed when they logged in on this
+// browser. Identity is portable: the same id on any browser is the same person.
+// Returns null when nobody is logged in (the app then forces the login modal).
+// This is NOT authentication — it only divides ownership/responsibility.
 function getClientId() {
-    let id = localStorage.getItem(ID_CLIENT_KEY);
-    if (!id) {
-        id = 'c' + Math.random().toString(36).slice(2, 8) + Date.now().toString(36);
-        localStorage.setItem(ID_CLIENT_KEY, id);
-    }
-    return id;
+    return localStorage.getItem(ID_IDENTITY_KEY) || null;
 }
 
-// When running as a Chrome extension with the "storage" permission,
-// chrome.storage.sync is shared across every Chrome install signed into the
-// same Google account (different profiles/channels on the same computer
-// included). On first run after install we reconcile the local id with the
-// synced one so "who am I" stays consistent across those installs, instead
-// of each one generating its own random id. Falls back to the existing
-// per-browser localStorage id when running as a plain page or when sync is
-// unavailable. Must be awaited before any code calls getClientId().
+function isLoggedIn() {
+    return !!localStorage.getItem(ID_IDENTITY_KEY);
+}
+
+function setIdentity(nationalId) {
+    if (nationalId) localStorage.setItem(ID_IDENTITY_KEY, String(nationalId));
+}
+
+function clearIdentity() {
+    localStorage.removeItem(ID_IDENTITY_KEY);
+}
+
+// Best-effort: when running as a Chrome extension signed into a Google account,
+// remember the logged-in national id across that account's installs so the
+// person doesn't have to retype it. Push-only — never auto-pulls/auto-logs-in,
+// so an explicit logout stays logged out. Must be awaited before getClientId().
 async function syncClientId() {
     if (typeof chrome === 'undefined' || !chrome.storage || !chrome.storage.sync) return;
     try {
-        const stored = await chrome.storage.sync.get(ID_CLIENT_KEY);
-        if (stored && stored[ID_CLIENT_KEY]) {
-            localStorage.setItem(ID_CLIENT_KEY, stored[ID_CLIENT_KEY]);
-        } else {
-            await chrome.storage.sync.set({ [ID_CLIENT_KEY]: getClientId() });
+        const local = localStorage.getItem(ID_IDENTITY_KEY);
+        if (local) {
+            await chrome.storage.sync.set({ [ID_IDENTITY_KEY]: local });
         }
     } catch (e) {
-        // sync unavailable (e.g. not signed in) — keep the local id
+        // sync unavailable (e.g. not signed in) — keep the local identity
     }
 }
 

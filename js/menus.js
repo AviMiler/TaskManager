@@ -216,96 +216,31 @@ function closeManageTypesModal() {
     if (m) m.remove();
 }
 
-// ===== Team management =====
-// All edits (renames, additions, deletions, reassignments) are staged in
-// memory and only written to storage when the user clicks "שמור". Closing
-// the modal (×) discards any unsaved changes.
+// ===== Team directory =====
+// People can no longer be added manually — everyone registers themselves by
+// logging in with their national id (תז). This modal is therefore a read-only
+// directory of who has registered. Renaming is done by each person in their
+// own profile; the only edit kept here is removing a stale/duplicate entry.
 function openTeamModal() {
     closePopovers();
 
     const me = getUser();
-    let working = getMembers().map(m => ({ ...m })); // staged roster
-    const removedIds = new Set();       // ids to delete on save
-    const renames = new Map();          // id -> new name
-    const newMembers = new Set();       // ids of not-yet-persisted members
-    const reassignments = new Map();    // removed member id -> new assigneeId or null
+    const members = getMembers().slice()
+        .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'he'));
 
-    const renderList = (container) => {
-        const visible = working
-            .filter(m => !removedIds.has(String(m.id)))
-            .slice()
-            .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'he'));
-
-        if (visible.length === 0) {
-            container.innerHTML = '<div style="color:var(--ink-f);font-size:13px;padding:12px 0;">אין אנשי צוות עדיין</div>';
-            return;
-        }
-        container.innerHTML = visible.map(m => {
-            const name = renames.get(String(m.id)) ?? m.name;
-            const ini = initials(name) || (name || '').substring(0, 2);
-            const isMe = String(m.id) === String(me.id);
-            return `
-            <div class="team-row" data-member-id="${m.id}">
-                <div class="avatar avatar-sm" style="--hue:${m.hue};">${escapeHtml(ini)}</div>
-                <input type="text" class="field-input team-name-input" value="${escapeHtml(name)}" data-member-id="${m.id}">
-                ${isMe ? '<span class="team-me-badge">אני</span>' : ''}
-                <button class="manage-type-delete" type="button" data-del-member="${m.id}" aria-label="מחק" ${isMe ? 'disabled title="לא ניתן למחוק את עצמך"' : ''}>×</button>
-            </div>`;
-        }).join('');
-
-        container.querySelectorAll('.team-name-input').forEach(input => {
-            input.addEventListener('keydown', e => { if (e.key === 'Enter') input.blur(); });
-            input.addEventListener('blur', () => {
-                const id = String(input.dataset.memberId);
-                const m = working.find(x => String(x.id) === id);
-                const newName = input.value.trim();
-                const current = renames.get(id) ?? (m ? m.name : '');
-                if (!newName || newName === current) { input.value = current; return; }
-                renames.set(id, newName);
-            });
-        });
-
-        container.querySelectorAll('[data-del-member]').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                const id = String(btn.dataset.delMember);
-                const m = working.find(x => String(x.id) === id);
-                if (!m) return;
-                const displayName = renames.get(id) ?? m.name;
-
-                if (newMembers.has(id)) {
-                    // Not persisted yet - just drop it, no tasks can reference it.
-                    working = working.filter(x => String(x.id) !== id);
-                    newMembers.delete(id);
-                    renames.delete(id);
-                    renderList(container);
-                    return;
-                }
-
-                const usedTasks = getAllTasks().filter(t => String(t.assigneeId) === id);
-                if (usedTasks.length > 0) {
-                    const others = working.filter(x => !removedIds.has(String(x.id)) && String(x.id) !== id);
-                    const options = [
-                        { value: '', label: 'ללא אחראי' },
-                        ...others.map(o => ({ value: o.id, label: renames.get(String(o.id)) ?? o.name }))
-                    ];
-                    const choice = await showSelect(
-                        `"${displayName}" מוגדר כאחראי ב-${usedTasks.length} משימות. בחר למי לשייך את המשימות לפני המחיקה:`,
-                        options,
-                        'מחיקת איש צוות',
-                        'מחק ושייך מחדש',
-                        'ביטול'
-                    );
-                    if (choice === null) return;
-                    reassignments.set(id, choice || null);
-                } else {
-                    const ok = await showConfirm(`למחוק את "${displayName}" מהצוות?`, 'מחיקת איש צוות', 'מחק', 'ביטול');
-                    if (!ok) return;
-                }
-                removedIds.add(id);
-                renderList(container);
-            });
-        });
-    };
+    const rowsHtml = members.length ? members.map(m => {
+        const ini = initials(m.name) || (m.name || '').substring(0, 2);
+        const isMe = String(m.id) === String(me.id);
+        return `
+        <div class="team-row" data-member-id="${escapeAttr(String(m.id))}">
+            <div class="avatar avatar-sm" style="--hue:${m.hue};">${escapeHtml(ini)}</div>
+            <div class="team-row-meta">
+                <span class="user-name">${escapeHtml(m.name)}${isMe ? ' <span class="team-me-badge">אני</span>' : ''}</span>
+                <span class="team-row-sub">${m.role ? escapeHtml(m.role) + ' · ' : ''}ת"ז ${escapeHtml(maskNationalId(String(m.id)))}</span>
+            </div>
+            <button class="manage-type-delete" type="button" data-del-member="${escapeAttr(String(m.id))}" aria-label="הסר" ${isMe ? 'disabled title="לא ניתן להסיר את עצמך"' : ''}>×</button>
+        </div>`;
+    }).join('') : '<div style="color:var(--ink-f);font-size:13px;padding:12px 0;">אף אחד לא נרשם עדיין. כל אדם מצטרף בעצמו דרך כניסה עם תעודת זהות.</div>';
 
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
@@ -313,22 +248,15 @@ function openTeamModal() {
     overlay.innerHTML = `
         <div class="modal" data-action="event.stopPropagation()" style="max-width:440px;">
             <div class="modal-header">
-                <h2 class="modal-title">ניהול צוות</h2>
+                <h2 class="modal-title">צוות</h2>
                 <button class="modal-close" type="button" aria-label="סגור" data-action="closeTeamModal()">×</button>
             </div>
             <div class="modal-body">
-                <p style="color:var(--ink-f);font-size:12px;margin-bottom:10px;">שינוי שם מתעדכן אוטומטית בכל המשימות המשויכות.</p>
-                <div id="teamList"></div>
-                <div class="manage-type-add">
-                    <div class="manage-type-add-row">
-                        <input type="text" id="newMemberName" class="field-input" placeholder="שם איש צוות חדש...">
-                        <button class="btn-primary" type="button" id="addMemberBtn">הוסף</button>
-                    </div>
-                </div>
+                <p style="color:var(--ink-f);font-size:12px;margin-bottom:10px;">כל אדם מצטרף בעצמו בכניסה עם תעודת זהות. כאן רואים את כל מי שנרשם.</p>
+                <div id="teamList">${rowsHtml}</div>
             </div>
             <div class="modal-footer">
-                <button class="btn-secondary" type="button" data-action="closeTeamModal()">ביטול</button>
-                <button class="btn-primary" type="button" id="saveTeamBtn">שמור</button>
+                <button class="btn-primary" type="button" data-action="closeTeamModal()">סגור</button>
             </div>
         </div>
     `;
@@ -336,64 +264,41 @@ function openTeamModal() {
     overlay.addEventListener("click", (e) => { if (e.target === overlay) closeTeamModal(); });
     document.body.appendChild(overlay);
 
-    const container = overlay.querySelector('#teamList');
-    renderList(container);
-
-    const addBtn = overlay.querySelector('#addMemberBtn');
-    const nameInput = overlay.querySelector('#newMemberName');
-    const doAdd = async () => {
-        const name = nameInput.value.trim();
-        if (!name) return;
-        const exists = working.some(m => !removedIds.has(String(m.id)) && (renames.get(String(m.id)) ?? m.name) === name);
-        if (exists) {
-            await showAlert('איש צוות עם שם זה כבר קיים');
-            return;
-        }
-        const id = newUniqueId(working.map(m => m.id));
-        working.push({ id, name, role: '', hue: nameHue(name) });
-        newMembers.add(String(id));
-        nameInput.value = '';
-        renderList(container);
-    };
-    addBtn.addEventListener('click', doAdd);
-    nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') doAdd(); });
-
-    overlay.querySelector('#saveTeamBtn').addEventListener('click', () => {
-        // Apply removals first (with their task reassignments), so renames
-        // below don't bother touching members that are about to be deleted.
-        removedIds.forEach(id => {
-            if (reassignments.has(id)) {
-                const newAssigneeId = reassignments.get(id);
-                const newAssigneeName = newAssigneeId ? (renames.get(String(newAssigneeId)) ?? memberName(newAssigneeId)) : '';
+    // The single allowed edit: remove a stale entry (e.g. a duplicate from a
+    // typo). Tasks assigned to that person are offered a reassignment first.
+    overlay.querySelectorAll('[data-del-member]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const id = String(btn.dataset.delMember);
+            const m = getMembers().find(x => String(x.id) === id);
+            if (!m) return;
+            const usedTasks = getAllTasks().filter(t => String(t.assigneeId) === id);
+            if (usedTasks.length > 0) {
+                const others = getMembers().filter(x => String(x.id) !== id);
+                const options = [
+                    { value: '', label: 'ללא אחראי' },
+                    ...others.map(o => ({ value: o.id, label: o.name }))
+                ];
+                const choice = await showSelect(
+                    `"${m.name}" מוגדר כאחראי ב-${usedTasks.length} משימות. בחר למי לשייך אותן לפני ההסרה:`,
+                    options, 'הסרת איש צוות', 'הסר ושייך מחדש', 'ביטול'
+                );
+                if (choice === null) return;
+                const newName = choice ? memberName(choice) : '';
                 saveTasks(getAllTasks().map(t =>
                     String(t.assigneeId) === id
-                        ? { ...t, assigneeId: newAssigneeId, assignee: newAssigneeName, updatedAt: new Date().toISOString() }
+                        ? { ...t, assigneeId: choice || null, assignee: newName, updatedAt: new Date().toISOString() }
                         : t
                 ));
+            } else {
+                const ok = await showConfirm(`להסיר את "${m.name}"?`, 'הסרת איש צוות', 'הסר', 'ביטול');
+                if (!ok) return;
             }
             removeMember(id);
+            loadProjects();
+            rerenderCurrentView();
+            closeTeamModal();
+            openTeamModal();
         });
-
-        // New members that weren't deleted before save.
-        newMembers.forEach(id => {
-            if (removedIds.has(id)) return;
-            const m = working.find(x => String(x.id) === id);
-            if (m) upsertMember({ id: m.id, name: renames.get(id) ?? m.name, role: m.role, hue: m.hue });
-        });
-
-        // Renames for existing, non-removed, non-new members.
-        renames.forEach((newName, id) => {
-            if (removedIds.has(id) || newMembers.has(id)) return;
-            renameMember(id, newName);
-            if (id === String(me.id)) {
-                const u = getUser();
-                saveUser({ name: newName, role: u.role, hue: u.hue });
-            }
-        });
-
-        loadProjects();
-        rerenderCurrentView();
-        closeTeamModal();
     });
 }
 

@@ -206,21 +206,24 @@ function openProjectSettings(id, event) {
             });
         });
 
+        // Only people who have registered themselves can be added to a project —
+        // there is no inline person creation. When everyone is already a member
+        // (or nobody has registered yet) the picker shows a disabled hint.
         const available = allMembers.filter(m => !memberIds.includes(String(m.id)))
             .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'he'));
-        const opts = available.map(m => `<option value="${m.id}">${escapeHtml(m.name)}</option>`).join('');
-        addSelectEl.innerHTML = opts + '<option value="__new__">+ הוסף איש צוות חדש…</option>';
+        if (available.length) {
+            addSelectEl.innerHTML = available.map(m => `<option value="${m.id}">${escapeHtml(m.name)}</option>`).join('');
+            addSelectEl.disabled = false;
+            addBtnEl.disabled = false;
+        } else {
+            addSelectEl.innerHTML = '<option value="">אין אנשים זמינים — כל אחד מצטרף בעצמו דרך כניסה עם ת"ז</option>';
+            addSelectEl.disabled = true;
+            addBtnEl.disabled = true;
+        }
     };
 
-    addBtnEl.addEventListener('click', async () => {
-        let val = addSelectEl.value;
-        if (val === '__new__') {
-            const name = (await showPrompt('שם איש הצוות', '', 'הוספת חבר לפרויקט') || '').trim();
-            if (!name) return;
-            const member = addMember(name);
-            if (!member) return;
-            val = String(member.id);
-        }
+    addBtnEl.addEventListener('click', () => {
+        const val = addSelectEl.value;
         if (!val) return;
         if (!memberIds.includes(val)) memberIds.push(val);
         renderMembers();

@@ -24,7 +24,7 @@ TaskManager/
 
 | קובץ | תוכן |
 |---|---|
-| `store/ids.js` | יצירת IDs |
+| `store/ids.js` | זהות + יצירת IDs: `getClientId` (=תז מחובר), `isLoggedIn`, `setIdentity`, `clearIdentity`, `syncClientId`, `newId`, `newUniqueId` |
 | `store/Store.js` | interface/ממשק בסיס |
 | `store/LocalJsonStore.js` | מימוש localStorage |
 | `store/HttpStore.js` | מימוש מבוסס שרת HTTP |
@@ -33,10 +33,10 @@ TaskManager/
 ## js/ — מפת פונקציות לפי קובץ
 
 ### state.js (63 שורות) — קבועים + state גלובלי
-`DB` (מפתחות localStorage, כולל `members: 'tb_members'`, `workspace: 'tb_workspace'`), `DEFAULT_USER`, `currentProjectId`, `editingTaskId`, `mandatoryProfileOpen`, `HUES`, `KNOWN_TAGS`, `PRESET_HUES`, `DEFAULT_COLUMNS`, `DEFAULT_TASK_TYPES`, `ICONS`
+`DB` (מפתחות localStorage, כולל `members: 'tb_members'`, `workspace: 'tb_workspace'`, `identity: 'tb_identity'` = תז מחובר, `identityMigrated`), `DEFAULT_USER`, `currentProjectId`, `editingTaskId`, `mandatoryProfileOpen`, `HUES`, `KNOWN_TAGS`, `PRESET_HUES`, `DEFAULT_COLUMNS`, `DEFAULT_TASK_TYPES`, `ICONS`
 
-### utils.js (39) — עוזרים כלליים
-`escapeHtml`, `unescapeForInput`, `nameHue`, `initials`, `escapeAttr`
+### utils.js — עוזרים כלליים
+`escapeHtml`, `unescapeForInput`, `nameHue`, `initials`, `escapeAttr`, `normalizeNationalId`, `isValidIsraeliId` (בדיקת ספרת ביקורת ת"ז — לא אבטחה), `maskNationalId`
 
 ### dialogs.js (91) — דיאלוגים מותאמים (alert/confirm/prompt)
 `_buildDialog`, `showAlert`, `showConfirm`, `showPrompt`
@@ -44,11 +44,13 @@ TaskManager/
 ### storage.js (139) — localStorage: פרויקטים/משימות/עמודות/סוגי משימה
 `migrateTaskOwnership`, `getProjects`, `getAllTasks`, `getTasks`, `saveProjects`, `saveTasks`, `createBackup`, `sortColumns`, `getColumns`, `saveColumns`, `getTaskTypes`, `saveTaskTypes`, `addColumn`, `deleteColumn`, `renameColumn`
 
-### members.js (122) — צוות/אנשי קשר (members)
-`getMembers`, `saveMembers`, `getMemberById`, `memberName`, `upsertMember`, `addMember`, `renameMember`, `removeMember`, `propagateMemberName`, `assigneeOptionsHtml`, `migrateMembersAndAssignees`
+### members.js — צוות/אנשי קשר (members)
+מזהה כל אדם = **תעודת הזהות שלו** (`member.id === תז`). אין הוספה ידנית — כל אחד נרשם בעצמו בכניסה.
+`getMembers`, `saveMembers`, `getMemberById`, `memberName`, `upsertMember`, `renameMember`, `removeMember`, `propagateMemberName`, `assigneeOptionsHtml` (בלי "+ הוסף"), `migrateMembersAndAssignees`, `migrateLegacyIdentity(תז)` (מיגרציה חד-פעמית: כתיבה מחדש של מזהה אקראי ישן → תז בכל המשימות/פרויקטים)
 
-### user.js (191) — פרופיל משתמש נוכחי + UI סנכרון
-`getUser`, `saveUser`, `isMine`, `toggleMineOnly`, `renderUserUI` (topbar chip: `#topUserAvatar`/`#topUserName`/`#topUserRole`), `renderSyncStatusUI`, `openUserProfileModal(mandatory)`, `saveUserFromModal`
+### user.js — זהות/כניסה (לפי ת"ז) + UI סנכרון
+זהות = `getClientId()` מחזיר את התז המחובר (מ-`store/ids.js`: `isLoggedIn`/`setIdentity`/`clearIdentity`, מפתח `tb_identity`).
+`getUser`, `saveUser`, `login(תז, profile)`, `logout`, `isMine`, `isAssignedToMe`, `toggleMineOnly`, `renderUserUI` (topbar chip: `#topUserAvatar`/`#topUserName`/`#topUserRole`), `renderSyncStatusUI`, `openUserProfileModal(mandatory)` (מסך כניסה: שדה ת"ז + שם; prefill לפי ת"ז מוכרת; כפתור התנתקות), `saveUserFromModal`
 
 ### projects.js — workspace (צוות) + CRUD פרויקטים + סלקטור
 `getWorkspace`, `saveWorkspace`, `renderWorkspaceUI` (topbar: `#workspaceName`), `editWorkspaceName`, `toggleSidebarSection(sectionId)` (קיפול מדורי sidebar), `getCurrentProjectId`, `setCurrentProjectId`, `addProject`, `deleteProject`, `openProjectSettings`, `closeProjectSettings`, `saveProjectSettings`, `selectProject`, `restoreCurrentProject`, `loadProjects`, `updateSelectorButton` (סלקטור עבר ל-topbar breadcrumb: `#projectSelectorBtn`/`#currentProjectName`/`#projectDropdown`), `renderProjectMembers`, `renderProjectDetails` (ממלא 3 מדורי sidebar: `#projectInfoBody`/`#projectMembersBody`/`#projectDetails`)
@@ -78,7 +80,7 @@ TaskManager/
 `updateUI`, `setView`, `setListScope`, `renderList`
 
 ### menus.js (339) — תפריטים שונים + ניהול סוגים/צוות
-`openNotificationsMenu`, `jumpToTask`, `openSettingsMenu`, `openUserMenu`, `buildColorSwatches`, `openManageTypesModal`, `closeManageTypesModal`, `openTeamModal`, `closeTeamModal`
+`openNotificationsMenu`, `jumpToTask`, `openSettingsMenu`, `openUserMenu`, `buildColorSwatches`, `openManageTypesModal`, `closeManageTypesModal`, `openTeamModal` (ספריית נרשמים לקריאה בלבד — בלי הוספה ידנית), `closeTeamModal`
 
 ### settings.js (66) — ייצוא/ייבוא/גיבוי/ניקוי
 `exportData`, `importData`, `showBackupInfo`, `clearAllData`

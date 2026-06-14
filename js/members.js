@@ -49,15 +49,6 @@ function upsertMember({ id, name, role, hue }) {
     return m;
 }
 
-// Add a brand-new member (manual roster entry) with a fresh id.
-function addMember(name, role, hue) {
-    name = (name || '').trim();
-    if (!name) return null;
-    const existing = getMembers().find(m => m.name === name);
-    if (existing) return existing;
-    return upsertMember({ id: newId(), name, role, hue });
-}
-
 // Rename a member and propagate the new name to every task that references it.
 function renameMember(id, newName) {
     newName = (newName || '').trim();
@@ -95,7 +86,57 @@ function assigneeOptionsHtml(selectedId) {
     const opts = members.map(m =>
         `<option value="${m.id}" ${String(selectedId) === String(m.id) ? 'selected' : ''}>${escapeHtml(m.name)}</option>`
     ).join('');
-    return `<option value="">— ללא —</option>${opts}<option value="__add__">+ הוסף איש צוות…</option>`;
+    return `<option value="">— ללא —</option>${opts}`;
+}
+
+// One-time migration when a person first logs in with their national id (תז).
+// Before this feature each browser owned a random client id; rewrite every
+// reference to this browser's old id over to the typed תז so existing
+// ownership / assignment / project-membership keeps pointing at the same
+// person. Runs once per browser. Daily standup entries key by name (not id)
+// so they need no rewrite.
+function migrateLegacyIdentity(nationalId) {
+    if (localStorage.getItem(DB.identityMigrated)) return;
+    localStorage.setItem(DB.identityMigrated, '1');
+
+    const oldId = localStorage.getItem('tb_client_id');
+    if (!oldId || String(oldId) === String(nationalId)) return;
+
+    createBackup();
+    const now = new Date().toISOString();
+
+    // Members: fold the old random-id record into the תז-keyed one.
+    let members = getMembers();
+    const old = members.find(m => String(m.id) === String(oldId));
+    members = members.filter(m => String(m.id) !== String(oldId));
+    if (old && !members.find(m => String(m.id) === String(nationalId))) {
+        members.push({ ...old, id: nationalId, updatedAt: now });
+    }
+    saveMembers(members);
+
+    // Tasks: createdById / assigneeId.
+    saveTasks(getAllTasks().map(t => {
+        const nt = { ...t };
+        let changed = false;
+        if (String(t.createdById) === String(oldId)) { nt.createdById = nationalId; changed = true; }
+        if (String(t.assigneeId) === String(oldId)) { nt.assigneeId = nationalId; changed = true; }
+        if (changed) nt.updatedAt = now;
+        return nt;
+    }));
+
+    // Projects: ownerId / createdById / memberIds.
+    saveProjects(getProjects().map(p => {
+        const np = { ...p };
+        let changed = false;
+        if (String(p.ownerId) === String(oldId)) { np.ownerId = nationalId; changed = true; }
+        if (String(p.createdById) === String(oldId)) { np.createdById = nationalId; changed = true; }
+        if (Array.isArray(p.memberIds) && p.memberIds.some(id => String(id) === String(oldId))) {
+            np.memberIds = [...new Set(p.memberIds.map(id => String(id) === String(oldId) ? nationalId : id))];
+            changed = true;
+        }
+        if (changed) np.updatedAt = now;
+        return np;
+    }));
 }
 
 // Seed the roster from existing data and link tasks to members by id.
