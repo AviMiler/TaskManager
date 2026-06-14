@@ -79,14 +79,12 @@ function openLinkModal(projectId, linkId) {
                         <input type="text" id="linkUrl" class="field-input" value="${link && linkType === 'http' ? link.url : ''}" placeholder="https://..." style="display: ${linkType === 'http' ? 'block' : 'none'}">
                         <div id="fileInputWrap" style="display: ${linkType === 'file' ? 'block' : 'none'}">
                             <div class="file-upload-row">
-                                <button type="button" id="filePickerBtn" class="file-picker-btn">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                                    העלאה
+                                <button type="button" id="fileHelpBtn" class="file-picker-btn" aria-label="עזרה">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                                    איך מעתיקים נתיב?
                                 </button>
-                                <button type="button" id="fileHelpBtn" class="file-help-btn" aria-label="עזרה" title="איך מעתיקים נתיב?">?</button>
                             </div>
-                            <input type="file" id="linkFileInput" style="display:none;">
-                            <input type="text" id="linkFileUrl" class="field-input" value="${fileUrlValue}" placeholder="הדבק כאן את הנתיב המלא" style="margin-top: 8px; direction: ltr; text-align: left;">
+                            <input type="text" id="linkFileUrl" class="field-input" value="${fileUrlValue}" placeholder="הדבק כאן את הנתיב המלא לקובץ" style="margin-top: 8px; direction: ltr; text-align: left;">
                         </div>
                         <div id="vscInputWrap" style="display: ${linkType === 'vsc' ? 'block' : 'none'}">
                             <div class="file-upload-row">
@@ -133,25 +131,10 @@ function openLinkModal(projectId, linkId) {
         });
     });
 
-    // Upload button - opens file picker, fills name into URL field
-    const filePickerBtn = overlay.querySelector('#filePickerBtn');
-    const fileInput = overlay.querySelector('#linkFileInput');
+    // The browser never exposes a picked file's real path (only its name), so
+    // there's no "upload" button — the user pastes the full path instead, the
+    // same way VSC folders work.
     const fileUrlInput = overlay.querySelector('#linkFileUrl');
-
-    if (filePickerBtn && fileInput) {
-        filePickerBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            fileInput.click();
-        });
-        fileInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                fileUrlInput.value = 'file:///' + file.name;
-                fileUrlInput.focus();
-                fileUrlInput.select();
-            }
-        });
-    }
 
     // Help button - shows instructions for full path
     const fileHelpBtn = overlay.querySelector('#fileHelpBtn');
