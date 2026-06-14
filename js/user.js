@@ -47,6 +47,17 @@ function isMine(item, { includeAssignee = false } = {}) {
     return false;
 }
 
+// "My tasks" filter inside a project — checks who the task is assigned to,
+// regardless of who created/owns it.
+function isAssignedToMe(task) {
+    if (!task) return false;
+    const me = getUser();
+    if (task.assigneeId !== undefined && task.assigneeId !== null && task.assigneeId !== '') {
+        return String(task.assigneeId) === String(me.id);
+    }
+    return !!(task.assignee && task.assignee === me.name);
+}
+
 // Toggles the "show only my projects" filter and re-renders the project list.
 function toggleMineOnly() {
     showMineOnly = !showMineOnly;

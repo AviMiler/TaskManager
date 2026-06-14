@@ -2,7 +2,7 @@
 function applyFiltersAndSort(tasks) {
     let out = tasks.slice();
 
-    if (tasksMineOnly) out = out.filter(t => isMine(t, { includeAssignee: true }));
+    if (tasksMineOnly) out = out.filter(t => isAssignedToMe(t));
     if (activeFilters.priority) out = out.filter(t => t.priority === activeFilters.priority);
     if (activeFilters.tag) out = out.filter(t => t.tag === activeFilters.tag);
     if (activeFilters.assignee) out = out.filter(t => t.assignee === activeFilters.assignee);
