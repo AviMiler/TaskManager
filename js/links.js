@@ -216,7 +216,6 @@ function openLinkModal(projectId, linkId) {
         b.addEventListener('click', () => {
             overlay.querySelectorAll('.link-icon-opt').forEach(x => x.classList.remove('selected'));
             b.classList.add('selected');
-            overlay.querySelector('#linkIconCustom').value = '';
         });
     });
 

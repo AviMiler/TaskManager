@@ -87,7 +87,7 @@ function renderUserUI() {
 }
 
 function renderSyncStatusUI() {
-    const settingsBtn = document.querySelectorAll('.topbar-icon-btn')[1];
+    const settingsBtn = document.querySelector('.topbar-icon-btn[aria-label="הגדרות"]');
     if (!settingsBtn) return;
     settingsBtn.style.position = 'relative';
     let dot = settingsBtn.querySelector('.sync-status-dot');
@@ -180,9 +180,9 @@ function openUserProfileModal(mandatory = false) {
     setTimeout(() => nameInput.focus(), 50);
 }
 
-function saveUserFromModal() {
+async function saveUserFromModal() {
     const name = document.getElementById('userName').value.trim();
-    if (!name) { alert('שם חובה'); return; }
+    if (!name) { await showAlert('שם חובה'); return; }
     const role = document.getElementById('userRole').value.trim();
     const hue = parseInt(document.getElementById('userHue').value, 10) || 0;
     saveUser({ name, role, hue });
