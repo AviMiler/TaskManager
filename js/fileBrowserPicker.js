@@ -8,6 +8,8 @@
 // service worker, which relays it to the link modal's path field.
 
 (function () {
+    let selectedUrl = null;
+
     function sendUrl(url) {
         chrome.runtime.sendMessage({ type: 'fileLinkSelected', url });
     }
@@ -16,26 +18,33 @@
         if (anchor.dataset.tbPicked) return;
         anchor.dataset.tbPicked = '1';
 
-        const btn = document.createElement('button');
-        btn.textContent = '✓';
-        btn.title = 'בחר פריט זה ל-TaskBoard';
-        btn.style.marginInlineStart = '6px';
-        btn.style.padding = '0 6px';
-        btn.style.fontSize = '13px';
-        btn.style.lineHeight = '1.6';
-        btn.style.background = '#16a34a';
-        btn.style.color = '#fff';
-        btn.style.border = 'none';
-        btn.style.borderRadius = '4px';
-        btn.style.cursor = 'pointer';
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.title = 'סמן פריט זה לבחירה';
+        checkbox.style.marginInlineStart = '6px';
+        checkbox.style.cursor = 'pointer';
+        checkbox.style.width = '16px';
+        checkbox.style.height = '16px';
+        checkbox.style.verticalAlign = 'middle';
 
-        btn.addEventListener('click', (e) => {
-            e.preventDefault();
+        checkbox.addEventListener('click', (e) => {
             e.stopPropagation();
-            sendUrl(anchor.href);
         });
 
-        anchor.insertAdjacentElement('afterend', btn);
+        checkbox.addEventListener('change', () => {
+            if (checkbox.checked) {
+                // Only one item may be selected at a time.
+                document.querySelectorAll('input[data-tb-checkbox="1"]').forEach((cb) => {
+                    if (cb !== checkbox) cb.checked = false;
+                });
+                selectedUrl = anchor.href;
+            } else if (selectedUrl === anchor.href) {
+                selectedUrl = null;
+            }
+        });
+        checkbox.dataset.tbCheckbox = '1';
+
+        anchor.insertAdjacentElement('afterend', checkbox);
     }
 
     function scanEntries() {
@@ -55,7 +64,7 @@
     // Floating button: pick the current page itself (the open file, or the
     // directory being viewed - e.g. for a VSC folder link).
     const pageBtn = document.createElement('button');
-    pageBtn.textContent = '✓ בחר את העמוד הזה ל-TaskBoard';
+    pageBtn.textContent = '✓ אישור בחירה ל-TaskBoard';
     pageBtn.style.position = 'fixed';
     pageBtn.style.top = '12px';
     pageBtn.style.right = '12px';
@@ -70,7 +79,7 @@
     pageBtn.style.cursor = 'pointer';
     pageBtn.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
 
-    pageBtn.addEventListener('click', () => sendUrl(location.href));
+    pageBtn.addEventListener('click', () => sendUrl(selectedUrl || location.href));
 
     document.documentElement.appendChild(pageBtn);
 })();
