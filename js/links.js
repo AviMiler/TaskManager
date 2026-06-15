@@ -179,7 +179,14 @@ function openLinkModal(projectId, linkId) {
         fileBrowserBtn.addEventListener('click', (e) => {
             e.preventDefault();
             if (window.chrome && chrome.runtime && chrome.runtime.sendMessage) {
-                chrome.runtime.sendMessage({ type: 'openFileBrowser' });
+                chrome.runtime.sendMessage({ type: 'openFileBrowser' }, () => {
+                    // Reading lastError prevents "Unchecked runtime.lastError"
+                    // noise; a real failure means the extension was reloaded
+                    // since this tab was opened.
+                    if (chrome.runtime.lastError) {
+                        showAlert('יש לרענן את הלשונית (F5) אחרי טעינת/עדכון התוסף, ואז לנסות שוב.');
+                    }
+                });
             } else {
                 showAlert('תכונה זו זמינה רק כשהאפליקציה פועלת כתוסף Chrome.');
             }
