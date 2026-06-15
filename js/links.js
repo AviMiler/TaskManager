@@ -83,6 +83,10 @@ function openLinkModal(projectId, linkId) {
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
                                     בחר קובץ
                                 </button>
+                                <button type="button" id="fileBrowserBtn" class="file-picker-btn">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h5l2 2h9a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z"/></svg>
+                                    פתח דפדפן קבצים
+                                </button>
                                 <button type="button" id="fileHelpBtn" class="file-help-btn" aria-label="עזרה" title="איך מעתיקים נתיב?">?</button>
                             </div>
                             <input type="text" id="linkFileUrl" class="field-input" value="${fileUrlValue}" placeholder="הדבק כאן את הנתיב המלא לקובץ" style="margin-top: 8px; direction: ltr; text-align: left;">
@@ -166,6 +170,34 @@ function openLinkModal(projectId, linkId) {
         });
     }
 
+    // "Open file browser" - opens Chrome's built-in file:// listing in a new
+    // tab (via the service worker, since the page can't navigate to file://
+    // itself). A content script there adds a "select" button that reports the
+    // chosen file:// URL back here, filling the path field with a real path.
+    const fileBrowserBtn = overlay.querySelector('#fileBrowserBtn');
+    if (fileBrowserBtn && fileUrlInput) {
+        fileBrowserBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (window.chrome && chrome.runtime && chrome.runtime.sendMessage) {
+                chrome.runtime.sendMessage({ type: 'openFileBrowser' });
+            } else {
+                showAlert('תכונה זו זמינה רק כשהאפליקציה פועלת כתוסף Chrome.');
+            }
+        });
+    }
+
+    if (window.chrome && chrome.runtime && chrome.runtime.onMessage) {
+        const onFileLinkPicked = (msg) => {
+            if (msg && msg.type === 'fileLinkPicked' && msg.url && fileUrlInput) {
+                fileUrlInput.value = msg.url;
+                fileUrlInput.dispatchEvent(new Event('input'));
+                fileUrlInput.focus();
+            }
+        };
+        chrome.runtime.onMessage.addListener(onFileLinkPicked);
+        overlay._onFileLinkPicked = onFileLinkPicked;
+    }
+
     // Help button - shows instructions for full path
     const fileHelpBtn = overlay.querySelector('#fileHelpBtn');
     if (fileHelpBtn) {
@@ -238,7 +270,12 @@ function openLinkModal(projectId, linkId) {
 
 function closeLinkModal() {
     const m = document.getElementById('linkModal');
-    if (m) m.remove();
+    if (m) {
+        if (m._onFileLinkPicked && window.chrome && chrome.runtime && chrome.runtime.onMessage) {
+            chrome.runtime.onMessage.removeListener(m._onFileLinkPicked);
+        }
+        m.remove();
+    }
 }
 
 async function saveLinkFromModal(projectId, linkId) {
