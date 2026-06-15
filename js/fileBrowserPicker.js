@@ -64,13 +64,23 @@
     // document load, so observe for the rows being added.
     new MutationObserver(scanEntries).observe(document.documentElement, { childList: true, subtree: true });
 
+    // Make the listing itself easier to read: bigger rows, friendlier font.
+    const style = document.createElement('style');
+    style.textContent = `
+        body { font-family: system-ui, sans-serif !important; font-size: 16px !important; }
+        table#dir-content tr, table#dir-content td { font-size: 16px !important; line-height: 2.2 !important; }
+        table#dir-content td { padding-top: 6px !important; padding-bottom: 6px !important; }
+        a[href^="file://"] { font-size: 16px !important; }
+    `;
+    document.documentElement.appendChild(style);
+
     // Floating button: pick the current page itself (the open file, or the
     // directory being viewed - e.g. for a VSC folder link).
     const pageBtn = document.createElement('button');
     pageBtn.textContent = '✓ אישור בחירה ל-TaskBoard';
     pageBtn.style.position = 'fixed';
-    pageBtn.style.top = '12px';
-    pageBtn.style.right = '12px';
+    pageBtn.style.bottom = '12px';
+    pageBtn.style.left = '12px';
     pageBtn.style.zIndex = '2147483647';
     pageBtn.style.padding = '10px 16px';
     pageBtn.style.fontSize = '14px';
