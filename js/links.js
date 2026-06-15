@@ -79,10 +79,11 @@ function openLinkModal(projectId, linkId) {
                         <input type="text" id="linkUrl" class="field-input" value="${link && linkType === 'http' ? link.url : ''}" placeholder="https://..." style="display: ${linkType === 'http' ? 'block' : 'none'}">
                         <div id="fileInputWrap" style="display: ${linkType === 'file' ? 'block' : 'none'}">
                             <div class="file-upload-row">
-                                <button type="button" id="fileHelpBtn" class="file-picker-btn" aria-label="עזרה">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                                    איך מעתיקים נתיב?
+                                <button type="button" id="filePickerBtn" class="file-picker-btn">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
+                                    בחר קובץ
                                 </button>
+                                <button type="button" id="fileHelpBtn" class="file-help-btn" aria-label="עזרה" title="איך מעתיקים נתיב?">?</button>
                             </div>
                             <input type="text" id="linkFileUrl" class="field-input" value="${fileUrlValue}" placeholder="הדבק כאן את הנתיב המלא לקובץ" style="margin-top: 8px; direction: ltr; text-align: left;">
                         </div>
@@ -131,10 +132,39 @@ function openLinkModal(projectId, linkId) {
         });
     });
 
-    // The browser never exposes a picked file's real path (only its name), so
-    // there's no "upload" button — the user pastes the full path instead, the
-    // same way VSC folders work.
     const fileUrlInput = overlay.querySelector('#linkFileUrl');
+
+    // "Choose file" picker. The browser never exposes a picked file's real path
+    // (only its name), so this serves two purposes:
+    //  1. Convenience: prefills file:///<name> so the user only edits the folder.
+    //  2. Keeps the picked File in window._fileBlobs so a click can open it via a
+    //     blob URL within the same session (the projects.js click handler reads
+    //     this), even before the user fills in a full on-disk path.
+    // For a real, persistent/sync-able link the user still pastes the full path.
+    const filePickerBtn = overlay.querySelector('#filePickerBtn');
+    if (filePickerBtn && fileUrlInput) {
+        filePickerBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            try {
+                if ('showOpenFilePicker' in window) {
+                    const [handle] = await window.showOpenFilePicker();
+                    const file = await handle.getFile();
+                    const fileUri = 'file:///' + file.name;
+                    window._fileBlobs = window._fileBlobs || {};
+                    window._fileBlobs[fileUri] = file;
+                    if (!fileUrlInput.value.trim()) fileUrlInput.value = fileUri;
+                    fileUrlInput.focus();
+                    fileUrlInput.select();
+                } else {
+                    await showAlert('הדפדפן שלך לא תומך בבחירת קובץ. הדבק את הנתיב המלא ידנית.');
+                }
+            } catch (err) {
+                if (err.name !== 'AbortError') {
+                    await showAlert('שגיאה בבחירת קובץ: ' + err.message);
+                }
+            }
+        });
+    }
 
     // Help button - shows instructions for full path
     const fileHelpBtn = overlay.querySelector('#fileHelpBtn');
