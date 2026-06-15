@@ -39,11 +39,14 @@
     }
 
     function scanEntries() {
-        // Chrome's directory-listing rows are <a href="file://..."> links to
-        // each file/subfolder. Skip the page's own URL (would just re-add a
-        // button to itself via "..": filtered by href !== location.href).
-        document.querySelectorAll('a[href^="file://"]').forEach((a) => {
-            if (a.href !== location.href) addEntryPickButton(a);
+        // Chrome's directory-listing rows are <a> links to each file/subfolder,
+        // but with relative href attributes (e.g. href="Users/") - the CSS
+        // attribute selector won't match those. Check the resolved .href
+        // property instead, which is always an absolute file:// URL.
+        document.querySelectorAll('a[href]').forEach((a) => {
+            if (a.href && a.href.startsWith('file://') && a.href !== location.href) {
+                addEntryPickButton(a);
+            }
         });
     }
 
