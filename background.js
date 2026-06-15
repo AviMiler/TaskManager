@@ -25,7 +25,9 @@ chrome.runtime.onMessage.addListener((msg, sender) => {
     // tab so the user can navigate the filesystem and pick a real path.
     if (msg && msg.type === 'openFileBrowser' && sender.tab) {
         const openerTabId = sender.tab.id;
-        chrome.tabs.create({ url: 'file:///', active: true }, (tab) => {
+        // Bare "file:///" causes ERR_TOO_MANY_REDIRECTS on some Windows setups;
+        // start at the C: drive instead, which opens correctly.
+        chrome.tabs.create({ url: 'file:///C:/', active: true }, (tab) => {
             openerTabByBrowserTab.set(tab.id, openerTabId);
         });
         return;
