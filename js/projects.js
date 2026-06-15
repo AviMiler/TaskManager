@@ -490,11 +490,16 @@ function renderProjectDetails() {
                     const path = link.url.replace('[#VSC#]', '').replace(/\\/g, '/');
                     window.location.href = 'vscode://file/' + path;
                 } else if (link.url.startsWith('file:')) {
-                    // Page context can't navigate to file:// (browser-blocked).
-                    // Hand it to the extension service worker, which opens it
-                    // via chrome.tabs.create. Falls back to window.open when not
-                    // running as an extension (e.g. plain web/file:// hosting).
-                    if (window.chrome && chrome.runtime && chrome.runtime.sendMessage) {
+                    const blobFile = window._fileBlobs && window._fileBlobs[link.url];
+                    if (blobFile) {
+                        // File was picked this session — open it directly via a
+                        // blob URL (works in any browser, no path needed).
+                        const blobUrl = URL.createObjectURL(blobFile);
+                        window.open(blobUrl, '_blank', 'noopener');
+                    } else if (window.chrome && chrome.runtime && chrome.runtime.sendMessage) {
+                        // Page context can't navigate to file:// (browser-blocked),
+                        // so hand the full path to the extension service worker,
+                        // which opens it via chrome.tabs.create.
                         chrome.runtime.sendMessage({ type: 'openLocalFile', url: link.url });
                     } else {
                         window.open(link.url, '_blank', 'noopener');
