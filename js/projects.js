@@ -117,6 +117,12 @@ function openProjectSettings(id, event) {
                 <button class="modal-close" type="button" aria-label="סגור" data-action="closeProjectSettings()">×</button>
             </div>
             <div class="modal-body">
+                <div class="project-details-meta" style="margin-bottom: 8px;">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                        <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                    </svg>
+                    <span>נוצר ${new Date(project.createdAt).toLocaleDateString('he-IL', { day: 'numeric', month: 'long', year: 'numeric' })}${project.createdBy ? ` ע״י ${escapeHtml(project.createdBy)}` : ''}</span>
+                </div>
                 <div class="field">
                     <label class="field-label">שם הפרויקט *</label>
                     <input type="text" id="projectName" class="field-input" value="${project.name}" placeholder="שם הפרויקט">
@@ -363,47 +369,6 @@ function updateSelectorButton() {
     nameEl.textContent = 'בחר פרויקט';
 }
 
-function buildProjectMembersHtml(project) {
-    if (!project) return '<div class="project-details-empty">—</div>';
-
-    const allMembers = getMembers();
-    const ownerId = String(project.ownerId ?? project.createdById ?? '');
-    let memberIds = (Array.isArray(project.memberIds) && project.memberIds.length)
-        ? project.memberIds.map(String)
-        : [ownerId].filter(Boolean);
-    memberIds = [...new Set(memberIds)];
-
-    if (!memberIds.length) return '<div class="project-details-empty">אין חברים בפרויקט</div>';
-
-    const me = getUser();
-    return memberIds.map(mid => {
-        const m = allMembers.find(x => String(x.id) === mid);
-        const name = m ? m.name : mid;
-        const ini = initials(name) || (name || '').substring(0, 2);
-        const isOwner = mid === ownerId;
-        const isMe = mid === String(me.id);
-        return `
-        <div class="project-member-row">
-            <div class="avatar avatar-sm" style="--hue:${m ? m.hue : 200};">${escapeHtml(ini)}</div>
-            <span class="project-member-name">${escapeHtml(name)}</span>
-            ${isMe ? '<span class="team-me-badge">אני</span>' : ''}
-            ${isOwner ? '<span class="project-member-owner">בעלים</span>' : ''}
-        </div>`;
-    }).join('');
-}
-
-function toggleMoreDetails() {
-    const body = document.getElementById('projectMoreDetailsBody');
-    if (!body) return;
-    const isHidden = body.style.display === 'none';
-    body.style.display = isHidden ? '' : 'none';
-    const toggle = body.closest('.project-more-details')?.querySelector('.project-more-details-toggle');
-    if (toggle) {
-        toggle.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
-        toggle.classList.toggle('expanded', isHidden);
-    }
-}
-
 function renderProjectDetails() {
     const panel = document.getElementById('projectDetails');
     const infoBody = document.getElementById('projectInfoBody');
@@ -420,37 +385,18 @@ function renderProjectDetails() {
     const hue = HUES[project.hueIdx || 0];
     const tasks = getTasks(project.id);
     const cols = getColumns();
-    const createdDate = new Date(project.createdAt).toLocaleDateString('he-IL', { day: 'numeric', month: 'long', year: 'numeric' });
 
-    // ===== Section 1: project info (description + more-details toggle) =====
+    // ===== Section 1: project info (description + more-details button) =====
     if (infoBody) {
         const descHtml = project.description
             ? `<div class="project-info-desc">${project.description}</div>`
             : '<div class="project-info-desc project-info-desc-empty">אין תיאור</div>';
 
-        const membersHtml = buildProjectMembersHtml(project);
-
         infoBody.innerHTML = `
             ${descHtml}
             <button class="project-info-settings-btn" type="button" data-action="openProjectSettings(${project.id}, event)">
-                ${ICONS.pencil}<span>הגדרות פרויקט</span>
+                ${ICONS.pencil}<span>פרטים נוספים</span>
             </button>
-            <div class="project-more-details">
-                <button class="project-more-details-toggle" type="button" data-action="toggleMoreDetails()" aria-expanded="false">
-                    <span>פרטים נוספים</span>
-                    <svg class="project-more-details-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
-                </button>
-                <div class="project-more-details-body" id="projectMoreDetailsBody" style="display:none;">
-                    <div class="project-details-meta">
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                            <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-                        </svg>
-                        <span>נוצר ${createdDate}${project.createdBy ? ` ע״י ${escapeHtml(project.createdBy)}` : ''}</span>
-                    </div>
-                    <div class="project-more-details-label">חברים בפרויקט</div>
-                    <div class="project-more-details-members">${membersHtml}</div>
-                </div>
-            </div>
         `;
     }
 
