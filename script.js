@@ -291,11 +291,14 @@ function addProject(name) {
         return;
     }
 
+    const creator = getUser().name;
     const project = {
         id: Date.now(),
         name: escapeHtml(name),
         hueIdx: projects.length % HUES.length,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        createdBy: escapeHtml(creator),
+        members: [escapeHtml(creator)]
     };
 
     projects.push(project);
@@ -380,6 +383,140 @@ function loadProjects() {
         `;
         list.appendChild(el);
     });
+}
+
+// ===== Project Settings =====
+// Creation metadata (when / by whom) and project members are shown ONLY here.
+function getProjectMembers(project) {
+    if (Array.isArray(project.members)) return project.members;
+    // Legacy projects: fall back to the creator (or current user) as the sole member.
+    return project.createdBy ? [project.createdBy] : [];
+}
+
+function formatProjectDate(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '—';
+    return d.toLocaleString('he-IL', {
+        day: 'numeric', month: 'long', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+    });
+}
+
+function openProjectSettings() {
+    closePopovers();
+    if (!currentProjectId) {
+        alert('בחר פרויקט תחילה');
+        return;
+    }
+    const project = getProjects().find(p => p.id === currentProjectId);
+    if (!project) return;
+
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.id = 'taskModal';
+    overlay.innerHTML = `
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h2 class="modal-title">הגדרות הפרויקט</h2>
+                <button class="modal-close" type="button" aria-label="סגור" onclick="closeModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="field">
+                    <label class="field-label">שם הפרויקט</label>
+                    <div class="project-settings-name">${project.name}</div>
+                </div>
+                <div class="field">
+                    <label class="field-label">נוצר</label>
+                    <div class="project-meta-row">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M8 2v4"/><path d="M16 2v4"/><path d="M3 9h18"/><rect x="3" y="4" width="18" height="18" rx="2"/>
+                        </svg>
+                        <span>${formatProjectDate(project.createdAt)}</span>
+                    </div>
+                    <div class="project-meta-row">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                        </svg>
+                        <span>על ידי ${project.createdBy ? project.createdBy : '—'}</span>
+                    </div>
+                </div>
+                <div class="field">
+                    <label class="field-label">חברים בפרויקט</label>
+                    <div id="projectMembersList" class="member-list"></div>
+                    <div class="member-add">
+                        <input type="text" id="newMemberInput" class="field-input" placeholder="הוסף חבר לפי שם…" aria-label="שם חבר חדש">
+                        <button class="sidebar-add-btn" type="button" id="addMemberBtn" aria-label="הוסף חבר">+</button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-primary" type="button" onclick="closeModal()">סגור</button>
+            </div>
+        </div>
+    `;
+    overlay.onclick = () => closeModal();
+    document.body.appendChild(overlay);
+
+    renderProjectMembers();
+
+    const input = overlay.querySelector('#newMemberInput');
+    const addBtn = overlay.querySelector('#addMemberBtn');
+    addBtn.addEventListener('click', () => addProjectMember(input.value));
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') addProjectMember(input.value);
+    });
+}
+
+function renderProjectMembers() {
+    const list = document.getElementById('projectMembersList');
+    if (!list) return;
+    const project = getProjects().find(p => p.id === currentProjectId);
+    if (!project) return;
+    const members = getProjectMembers(project);
+
+    if (members.length === 0) {
+        list.innerHTML = '<div class="member-empty">אין חברים עדיין</div>';
+        return;
+    }
+
+    list.innerHTML = members.map(name => `
+        <div class="member-item">
+            <div class="avatar avatar-sm" style="--hue: ${nameHue(name)};">${initials(name) || name.substring(0, 2)}</div>
+            <span class="member-name">${name}</span>
+            ${name === project.createdBy ? '<span class="member-badge">יוצר</span>' : ''}
+            <button class="member-remove" type="button" aria-label="הסר חבר" onclick="removeProjectMember('${escapeAttr(name)}')">×</button>
+        </div>
+    `).join('');
+}
+
+function addProjectMember(name) {
+    name = (name || '').trim();
+    if (!name) return;
+    const projects = getProjects();
+    const project = projects.find(p => p.id === currentProjectId);
+    if (!project) return;
+    const safeName = escapeHtml(name);
+    const members = getProjectMembers(project);
+    if (members.includes(safeName)) {
+        alert('חבר עם שם זה כבר קיים');
+        return;
+    }
+    project.members = [...members, safeName];
+    saveProjects(projects);
+    renderProjectMembers();
+    const input = document.getElementById('newMemberInput');
+    if (input) { input.value = ''; input.focus(); }
+}
+
+function removeProjectMember(name) {
+    const projects = getProjects();
+    const project = projects.find(p => p.id === currentProjectId);
+    if (!project) return;
+    const members = getProjectMembers(project);
+    project.members = members.filter(m => m !== name);
+    saveProjects(projects);
+    renderProjectMembers();
 }
 
 // ===== Tasks =====
@@ -641,6 +778,7 @@ function updateUI() {
     const title = document.getElementById('pageTitle');
     const breadcrumb = document.getElementById('currentProjectName');
     const subtitle = document.getElementById('pageSubtitle');
+    const projectSettingsBtn = document.getElementById('projectSettingsBtn');
 
     if (currentProjectId) {
         const project = getProjects().find(p => p.id === currentProjectId);
@@ -648,6 +786,7 @@ function updateUI() {
             title.textContent = project.name;
             breadcrumb.textContent = project.name;
             empty.style.display = 'none';
+            if (projectSettingsBtn) projectSettingsBtn.style.display = '';
             if (currentView === 'list') {
                 board.style.display = 'none';
                 setView('list');
@@ -662,6 +801,7 @@ function updateUI() {
     title.textContent = 'בחר פרויקט';
     breadcrumb.textContent = 'Workspace';
     subtitle.textContent = 'כדי להתחיל, בחר או צור פרויקט';
+    if (projectSettingsBtn) projectSettingsBtn.style.display = 'none';
     board.style.display = 'none';
     if (list) list.style.display = 'none';
     empty.style.display = 'flex';
@@ -1233,6 +1373,8 @@ function setupEventListeners() {
     // Filter + Sort
     const filterBtn = document.querySelector('.header-btn-filter');
     const sortBtn = document.querySelector('.header-btn-sort');
+    const projectSettingsBtn = document.getElementById('projectSettingsBtn');
+    if (projectSettingsBtn) projectSettingsBtn.addEventListener('click', (e) => { e.stopPropagation(); openProjectSettings(); });
     if (filterBtn) filterBtn.addEventListener('click', (e) => { e.stopPropagation(); openFilterMenu(filterBtn); });
     if (sortBtn) sortBtn.addEventListener('click', (e) => { e.stopPropagation(); openSortMenu(sortBtn); });
 
@@ -1332,3 +1474,6 @@ window.exportData = exportData;
 window.showBackupInfo = showBackupInfo;
 window.clearAllData = clearAllData;
 window.jumpToTask = jumpToTask;
+window.openProjectSettings = openProjectSettings;
+window.addProjectMember = addProjectMember;
+window.removeProjectMember = removeProjectMember;
