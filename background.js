@@ -29,6 +29,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         chrome.tabs.create({ url: 'file:///C:/', active: true }, (tab) => {
             openerTabByBrowserTab.set(tab.id, { openerTabId, mode });
         });
+        sendResponse({ ok: true });
         return;
     }
 
