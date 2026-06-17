@@ -1,9 +1,6 @@
-// Content script injected into Chrome's built-in file:// pages (directory
-// listings or file views). Adds a "select" button next to each matching
-// entry (file or folder, depending on mode). Clicking the button immediately
-// sends the chosen URL back to TaskBoard — no extra confirm step needed.
-// The mode ('file' or 'folder') is received from the background service
-// worker and controls which entries get a button.
+// Content script injected into Chrome's built-in file:// pages.
+// Renders a floating panel (inside Shadow DOM so no extension can touch it)
+// listing all file/folder entries on the page as selectable buttons.
 
 (function () {
     let browseMode = 'file';
@@ -16,65 +13,151 @@
         return href.endsWith('/');
     }
 
-    function addEntryPickButton(anchor) {
-        const href = anchor.href;
-        const entryIsFolder = isFolder(href);
-
-        if ((browseMode === 'file' && entryIsFolder) || (browseMode === 'folder' && !entryIsFolder)) {
-            return;
-        }
-
-        if (anchor.nextElementSibling && anchor.nextElementSibling.classList.contains('tb-pick-btn')) {
-            return;
-        }
-
-        const btn = document.createElement('button');
-        btn.textContent = browseMode === 'folder' ? 'בחר תיקייה' : 'בחר קובץ';
-        btn.className = 'tb-pick-btn';
-        btn.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            sendUrl(href);
-        });
-
-        anchor.insertAdjacentElement('afterend', btn);
+    function getEntryName(href) {
+        const decoded = decodeURIComponent(href.replace(/\/+$/, ''));
+        return decoded.split('/').pop() || decoded;
     }
 
-    function scanEntries() {
-        document.querySelectorAll('a[href]').forEach((a) => {
-            if (a.href && a.href.startsWith('file://') && a.href !== location.href) {
-                addEntryPickButton(a);
+    function buildPanel(shadow) {
+        const list = shadow.querySelector('.tb-list');
+        list.innerHTML = '';
+
+        const anchors = document.querySelectorAll('a[href]');
+        let count = 0;
+
+        anchors.forEach((a) => {
+            if (!a.href || !a.href.startsWith('file://') || a.href === location.href) return;
+
+            const href = a.href;
+            const entryIsFolder = isFolder(href);
+
+            if ((browseMode === 'file' && entryIsFolder) || (browseMode === 'folder' && !entryIsFolder)) {
+                return;
             }
+
+            count++;
+            const row = document.createElement('button');
+            row.className = 'tb-row';
+            row.textContent = (entryIsFolder ? '📁 ' : '📄 ') + getEntryName(href);
+            row.title = href;
+            row.addEventListener('click', () => sendUrl(href));
+            list.appendChild(row);
         });
+
+        const empty = shadow.querySelector('.tb-empty');
+        if (empty) empty.style.display = count ? 'none' : 'block';
     }
 
     chrome.runtime.sendMessage({ type: 'getFileBrowserMode' }, (mode) => {
         if (chrome.runtime.lastError || !mode) return;
         browseMode = mode;
 
-        const style = document.createElement('style');
-        style.textContent = `
-            body { font-family: system-ui, sans-serif !important; font-size: 16px !important; }
-            table#dir-content tr, table#dir-content td { font-size: 16px !important; line-height: 2.2 !important; }
-            table#dir-content td { padding-top: 6px !important; padding-bottom: 6px !important; }
-            a[href^="file://"] { font-size: 16px !important; }
-            .tb-pick-btn {
-                margin-inline-start: 8px;
-                padding: 2px 10px;
-                font-size: 13px;
-                font-family: system-ui, sans-serif;
-                background: #2563eb;
-                color: #fff;
-                border: none;
-                border-radius: 4px;
-                cursor: pointer;
-                vertical-align: middle;
-            }
-            .tb-pick-btn:hover { background: #1d4ed8; }
-        `;
-        document.documentElement.appendChild(style);
+        const host = document.createElement('div');
+        host.id = 'tb-picker-host';
+        host.style.cssText = 'position:fixed;top:0;left:0;z-index:2147483647;pointer-events:none;width:0;height:0;';
+        document.documentElement.appendChild(host);
 
-        scanEntries();
-        new MutationObserver(scanEntries).observe(document.documentElement, { childList: true, subtree: true });
+        const shadow = host.attachShadow({ mode: 'closed' });
+
+        const title = browseMode === 'folder' ? 'בחר תיקייה — TaskBoard' : 'בחר קובץ — TaskBoard';
+        const emptyText = browseMode === 'folder' ? 'אין תיקיות בדף זה' : 'אין קבצים בדף זה';
+
+        shadow.innerHTML = `
+            <style>
+                .tb-panel {
+                    pointer-events: auto;
+                    position: fixed;
+                    bottom: 16px;
+                    left: 16px;
+                    width: 340px;
+                    max-height: 60vh;
+                    background: #fff;
+                    border-radius: 10px;
+                    box-shadow: 0 4px 24px rgba(0,0,0,0.25);
+                    font-family: system-ui, -apple-system, sans-serif;
+                    font-size: 14px;
+                    direction: rtl;
+                    display: flex;
+                    flex-direction: column;
+                    overflow: hidden;
+                }
+                .tb-header {
+                    padding: 12px 16px;
+                    font-weight: 600;
+                    font-size: 15px;
+                    background: #2563eb;
+                    color: #fff;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                }
+                .tb-close {
+                    background: none;
+                    border: none;
+                    color: #fff;
+                    font-size: 18px;
+                    cursor: pointer;
+                    padding: 0 4px;
+                    line-height: 1;
+                }
+                .tb-close:hover { opacity: 0.7; }
+                .tb-list {
+                    overflow-y: auto;
+                    padding: 8px;
+                    flex: 1;
+                }
+                .tb-row {
+                    display: block;
+                    width: 100%;
+                    text-align: right;
+                    padding: 8px 12px;
+                    margin-bottom: 4px;
+                    background: #f1f5f9;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    font-size: 14px;
+                    font-family: inherit;
+                    color: #1e293b;
+                    transition: background 0.15s;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                }
+                .tb-row:hover {
+                    background: #dbeafe;
+                    border-color: #93c5fd;
+                }
+                .tb-row:active {
+                    background: #2563eb;
+                    color: #fff;
+                }
+                .tb-empty {
+                    padding: 16px;
+                    text-align: center;
+                    color: #94a3b8;
+                }
+                .tb-panel.tb-collapsed .tb-list,
+                .tb-panel.tb-collapsed .tb-empty {
+                    display: none !important;
+                }
+            </style>
+            <div class="tb-panel">
+                <div class="tb-header">
+                    <span>${title}</span>
+                    <button class="tb-close" title="מזער">−</button>
+                </div>
+                <div class="tb-list"></div>
+                <div class="tb-empty">${emptyText}</div>
+            </div>
+        `;
+
+        const panel = shadow.querySelector('.tb-panel');
+        shadow.querySelector('.tb-close').addEventListener('click', () => {
+            panel.classList.toggle('tb-collapsed');
+        });
+
+        buildPanel(shadow);
+        new MutationObserver(() => buildPanel(shadow)).observe(document.documentElement, { childList: true, subtree: true });
     });
 })();
