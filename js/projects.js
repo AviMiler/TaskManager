@@ -452,14 +452,23 @@ function renderProjectDetails() {
     }).join('');
 
     const links = Array.isArray(project.links) ? project.links : [];
-    const linksHtml = links.map(l => `
-        <div class="project-link-btn" data-link-id="${l.id}" title="${escapeAttr(l.url.startsWith('[#VSC#]') ? l.url.replace('[#VSC#]', '') : l.url)}">
+    const linksHtml = links.map(l => {
+        const isVsc = l.url.startsWith('[#VSC#]');
+        const isFile = l.url.startsWith('file:');
+        const displayUrl = isVsc ? l.url.replace('[#VSC#]', '') : l.url;
+        const href = isVsc ? 'vscode://file/' + l.url.replace('[#VSC#]', '').replace(/\\/g, '/') : l.url;
+        const useAnchor = isFile || isVsc;
+        const tag = useAnchor ? 'a' : 'div';
+        const extra = useAnchor ? `href="${escapeAttr(href)}"` : '';
+        const target = (!useAnchor && !isFile) ? 'target="_blank" rel="noopener"' : '';
+        return `
+        <${tag} class="project-link-btn" data-link-id="${l.id}" ${extra} ${target} title="${escapeAttr(displayUrl)}">
             <span class="project-link-icon">${renderLinkIcon(l.icon)}</span>
             <span class="project-link-name">${l.name}</span>
             <button class="project-link-edit" type="button" data-edit-link="${l.id}" aria-label="ערוך">✎</button>
             <button class="project-link-del" type="button" data-del-link="${l.id}" aria-label="מחק">×</button>
-        </div>
-    `).join('');
+        </${tag}>
+    `}).join('');
 
     panel.innerHTML = `
         <div class="project-details-body" style="--hue: ${hue};">
@@ -480,44 +489,23 @@ function renderProjectDetails() {
     const addBtn = panel.querySelector('#addLinkBtn');
     if (addBtn) addBtn.addEventListener('click', () => openLinkModal(project.id, null));
 
-    panel.querySelectorAll('.project-link-btn').forEach(el => {
+    panel.querySelectorAll('div.project-link-btn').forEach(el => {
         el.addEventListener('click', (e) => {
             if (e.target.closest('[data-edit-link]') || e.target.closest('[data-del-link]')) return;
-            const id = el.dataset.linkId;
-            const link = links.find(l => l.id === id);
-            if (link && link.url) {
-                if (link.url.startsWith('[#VSC#]')) {
-                    const path = link.url.replace('[#VSC#]', '').replace(/\\/g, '/');
-                    window.location.href = 'vscode://file/' + path;
-                } else if (link.url.startsWith('file:')) {
-                    const blobFile = window._fileBlobs && window._fileBlobs[link.url];
-                    if (blobFile) {
-                        // File was picked this session — open it directly via a
-                        // blob URL (works in any browser, no path needed).
-                        const blobUrl = URL.createObjectURL(blobFile);
-                        window.open(blobUrl, '_blank', 'noopener');
-                    } else if (window.chrome && chrome.runtime && chrome.runtime.sendMessage) {
-                        // Page context can't navigate to file:// (browser-blocked),
-                        // so hand the full path to the extension service worker,
-                        // which opens it via chrome.tabs.create.
-                        chrome.runtime.sendMessage({ type: 'openLocalFile', url: link.url });
-                    } else {
-                        window.open(link.url, '_blank', 'noopener');
-                    }
-                } else {
-                    window.open(link.url, '_blank', 'noopener');
-                }
-            }
+            const link = links.find(l => l.id === el.dataset.linkId);
+            if (link && link.url) window.open(link.url, '_blank', 'noopener');
         });
     });
     panel.querySelectorAll('[data-edit-link]').forEach(btn => {
         btn.addEventListener('click', (e) => {
+            e.preventDefault();
             e.stopPropagation();
             openLinkModal(project.id, btn.dataset.editLink);
         });
     });
     panel.querySelectorAll('[data-del-link]').forEach(btn => {
         btn.addEventListener('click', async (e) => {
+            e.preventDefault();
             e.stopPropagation();
             if (await showConfirm('למחוק את הקישור?')) deleteLink(project.id, btn.dataset.delLink);
         });
