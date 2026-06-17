@@ -1,26 +1,35 @@
 // Content script injected into Chrome's built-in file:// pages (directory
-// listings or file views). Adds:
-//  - a small "✓" button next to every file/folder entry in the listing, so
-//    the user can pick a specific item without navigating into it;
-//  - a floating button to pick the current page's own URL (the open file,
-//    or the directory itself).
-// Either sends the chosen file:// URL back to TaskBoard via the background
-// service worker, which relays it to the link modal's path field.
+// listings or file views). Adds checkboxes next to file/folder entries so
+// the user can pick one, then confirm with a floating button.
+// The mode ('file' or 'folder') is received from the background service
+// worker and controls which entries get checkboxes.
 
 (function () {
     let selectedUrl = null;
+    let browseMode = 'file';
 
     function sendUrl(url) {
         chrome.runtime.sendMessage({ type: 'fileLinkSelected', url });
+    }
+
+    function isFolder(href) {
+        return href.endsWith('/');
     }
 
     function addEntryPickButton(anchor) {
         if (anchor.dataset.tbPicked) return;
         anchor.dataset.tbPicked = '1';
 
+        const href = anchor.href;
+        const entryIsFolder = isFolder(href);
+
+        if ((browseMode === 'file' && entryIsFolder) || (browseMode === 'folder' && !entryIsFolder)) {
+            return;
+        }
+
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
-        checkbox.title = 'סמן פריט זה לבחירה';
+        checkbox.title = browseMode === 'folder' ? 'סמן תיקייה זו לבחירה' : 'סמן קובץ זה לבחירה';
         checkbox.style.marginInlineStart = '6px';
         checkbox.style.cursor = 'pointer';
         checkbox.style.width = '16px';
@@ -33,12 +42,11 @@
 
         checkbox.addEventListener('change', () => {
             if (checkbox.checked) {
-                // Only one item may be selected at a time.
                 document.querySelectorAll('input[data-tb-checkbox="1"]').forEach((cb) => {
                     if (cb !== checkbox) cb.checked = false;
                 });
-                selectedUrl = anchor.href;
-            } else if (selectedUrl === anchor.href) {
+                selectedUrl = href;
+            } else if (selectedUrl === href) {
                 selectedUrl = null;
             }
         });
@@ -48,10 +56,6 @@
     }
 
     function scanEntries() {
-        // Chrome's directory-listing rows are <a> links to each file/subfolder,
-        // but with relative href attributes (e.g. href="Users/") - the CSS
-        // attribute selector won't match those. Check the resolved .href
-        // property instead, which is always an absolute file:// URL.
         document.querySelectorAll('a[href]').forEach((a) => {
             if (a.href && a.href.startsWith('file://') && a.href !== location.href) {
                 addEntryPickButton(a);
@@ -59,12 +63,17 @@
         });
     }
 
-    scanEntries();
-    // Chrome builds the directory listing asynchronously after the initial
-    // document load, so observe for the rows being added.
-    new MutationObserver(scanEntries).observe(document.documentElement, { childList: true, subtree: true });
+    chrome.runtime.sendMessage({ type: 'getFileBrowserMode' }, (mode) => {
+        if (chrome.runtime.lastError) return;
+        if (mode) browseMode = mode;
 
-    // Make the listing itself easier to read: bigger rows, friendlier font.
+        scanEntries();
+        new MutationObserver(scanEntries).observe(document.documentElement, { childList: true, subtree: true });
+
+        const label = browseMode === 'folder' ? '✓ אישור בחירת תיקייה ל-TaskBoard' : '✓ אישור בחירת קובץ ל-TaskBoard';
+        pageBtn.textContent = label;
+    });
+
     const style = document.createElement('style');
     style.textContent = `
         body { font-family: system-ui, sans-serif !important; font-size: 16px !important; }
@@ -74,8 +83,6 @@
     `;
     document.documentElement.appendChild(style);
 
-    // Floating button: pick the current page itself (the open file, or the
-    // directory being viewed - e.g. for a VSC folder link).
     const pageBtn = document.createElement('button');
     pageBtn.textContent = '✓ אישור בחירה ל-TaskBoard';
     pageBtn.style.position = 'fixed';

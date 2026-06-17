@@ -97,6 +97,10 @@ function openLinkModal(projectId, linkId) {
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h5l2 2h9a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z"/></svg>
                                     בחר תיקייה
                                 </button>
+                                <button type="button" id="vscBrowserBtn" class="file-picker-btn">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h5l2 2h9a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z"/></svg>
+                                    פתח דפדפן קבצים
+                                </button>
                                 <button type="button" id="vscHelpBtn" class="file-help-btn" aria-label="עזרה" title="איך מעתיקים נתיב?">?</button>
                             </div>
                             <input type="file" id="linkVscInput" webkitdirectory directory multiple style="display:none;">
@@ -179,7 +183,7 @@ function openLinkModal(projectId, linkId) {
         fileBrowserBtn.addEventListener('click', (e) => {
             e.preventDefault();
             if (window.chrome && chrome.runtime && chrome.runtime.sendMessage) {
-                chrome.runtime.sendMessage({ type: 'openFileBrowser' }, () => {
+                chrome.runtime.sendMessage({ type: 'openFileBrowser', mode: 'file' }, () => {
                     // Reading lastError prevents "Unchecked runtime.lastError"
                     // noise; a real failure means the extension was reloaded
                     // since this tab was opened.
@@ -193,12 +197,38 @@ function openLinkModal(projectId, linkId) {
         });
     }
 
+    const vscPathInput = overlay.querySelector('#linkVscPath');
+
+    // VSC "browse for folder" button
+    const vscBrowserBtn = overlay.querySelector('#vscBrowserBtn');
+    if (vscBrowserBtn) {
+        vscBrowserBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (window.chrome && chrome.runtime && chrome.runtime.sendMessage) {
+                chrome.runtime.sendMessage({ type: 'openFileBrowser', mode: 'folder' }, () => {
+                    if (chrome.runtime.lastError) {
+                        showAlert('יש לרענן את הלשונית (F5) אחרי טעינת/עדכון התוסף, ואז לנסות שוב.');
+                    }
+                });
+            } else {
+                showAlert('תכונה זו זמינה רק כשהאפליקציה פועלת כתוסף Chrome.');
+            }
+        });
+    }
+
     if (window.chrome && chrome.runtime && chrome.runtime.onMessage) {
         const onFileLinkPicked = (msg) => {
-            if (msg && msg.type === 'fileLinkPicked' && msg.url && fileUrlInput) {
-                fileUrlInput.value = msg.url;
-                fileUrlInput.dispatchEvent(new Event('input'));
-                fileUrlInput.focus();
+            if (msg && msg.type === 'fileLinkPicked' && msg.url) {
+                if (msg.mode === 'folder' && vscPathInput) {
+                    let path = msg.url.replace(/^file:\/\/\//, '').replace(/\//g, '\\').replace(/\\$/, '');
+                    vscPathInput.value = path;
+                    vscPathInput.dispatchEvent(new Event('input'));
+                    vscPathInput.focus();
+                } else if (fileUrlInput) {
+                    fileUrlInput.value = msg.url;
+                    fileUrlInput.dispatchEvent(new Event('input'));
+                    fileUrlInput.focus();
+                }
             }
         };
         chrome.runtime.onMessage.addListener(onFileLinkPicked);
@@ -227,7 +257,6 @@ function openLinkModal(projectId, linkId) {
     // VSC folder picker - opens directory picker, fills folder name into path field
     const vscPickerBtn = overlay.querySelector('#vscPickerBtn');
     const vscInput = overlay.querySelector('#linkVscInput');
-    const vscPathInput = overlay.querySelector('#linkVscPath');
 
     if (vscPickerBtn && vscInput) {
         vscPickerBtn.addEventListener('click', (e) => {

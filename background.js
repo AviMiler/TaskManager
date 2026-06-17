@@ -15,7 +15,7 @@ chrome.tabs.onRemoved.addListener((tabId) => openerTabByBrowserTab.delete(tabId)
 // but the service worker can via chrome.tabs.create (requires the "tabs"
 // permission, "file:///*" host permission, and the user enabling
 // "Allow access to file URLs" on the extension's details page).
-chrome.runtime.onMessage.addListener((msg, sender) => {
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     if (msg && msg.type === 'openLocalFile' && msg.url) {
         chrome.tabs.create({ url: msg.url });
         return;
@@ -25,10 +25,9 @@ chrome.runtime.onMessage.addListener((msg, sender) => {
     // tab so the user can navigate the filesystem and pick a real path.
     if (msg && msg.type === 'openFileBrowser' && sender.tab) {
         const openerTabId = sender.tab.id;
-        // Bare "file:///" causes ERR_TOO_MANY_REDIRECTS on some Windows setups;
-        // start at the C: drive instead, which opens correctly.
+        const mode = msg.mode || 'file';
         chrome.tabs.create({ url: 'file:///C:/', active: true }, (tab) => {
-            openerTabByBrowserTab.set(tab.id, openerTabId);
+            openerTabByBrowserTab.set(tab.id, { openerTabId, mode });
         });
         return;
     }
@@ -37,12 +36,18 @@ chrome.runtime.onMessage.addListener((msg, sender) => {
     // chosen path back; relay it to the TaskBoard tab that opened the browser.
     if (msg && msg.type === 'fileLinkSelected' && msg.url && sender.tab) {
         const browserTabId = sender.tab.id;
-        const openerTabId = openerTabByBrowserTab.get(browserTabId);
+        const entry = openerTabByBrowserTab.get(browserTabId);
         openerTabByBrowserTab.delete(browserTabId);
-        if (openerTabId) {
-            chrome.tabs.sendMessage(openerTabId, { type: 'fileLinkPicked', url: msg.url });
-            chrome.tabs.update(openerTabId, { active: true });
+        if (entry) {
+            chrome.tabs.sendMessage(entry.openerTabId, { type: 'fileLinkPicked', url: msg.url, mode: entry.mode });
+            chrome.tabs.update(entry.openerTabId, { active: true });
         }
         chrome.tabs.remove(browserTabId);
+    }
+
+    // Content script asks what mode it should operate in.
+    if (msg && msg.type === 'getFileBrowserMode' && sender.tab) {
+        const entry = openerTabByBrowserTab.get(sender.tab.id);
+        sendResponse(entry ? entry.mode : 'file');
     }
 });
