@@ -5,6 +5,7 @@ window.openEditModal = openEditModal;
 window.closeLinkModal = closeLinkModal;
 window.editWorkspaceName = editWorkspaceName;
 window.toggleSidebarSection = toggleSidebarSection;
+window.toggleMoreDetails = toggleMoreDetails;
 window.openProjectSettings = openProjectSettings;
 window.closeProjectSettings = closeProjectSettings;
 window.saveProjectSettings = saveProjectSettings;

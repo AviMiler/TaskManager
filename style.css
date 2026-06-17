@@ -740,6 +740,61 @@ input {
     background: #f0f7ff;
 }
 
+/* More details toggle inside project info */
+.project-more-details {
+    border-top: 1px solid var(--line);
+    padding-top: 8px;
+}
+
+.project-more-details-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: none;
+    border: none;
+    padding: 4px 0;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--ink-f);
+    cursor: pointer;
+    transition: color 0.15s;
+}
+
+.project-more-details-toggle:hover {
+    color: var(--ink-s);
+}
+
+.project-more-details-chevron {
+    flex-shrink: 0;
+    transition: transform 0.2s;
+    transform: rotate(-90deg);
+}
+
+.project-more-details-toggle.expanded .project-more-details-chevron {
+    transform: rotate(0deg);
+}
+
+.project-more-details-body {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-top: 10px;
+}
+
+.project-more-details-label {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--ink-f);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.project-more-details-members {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
 /* Members in sidebar */
 .project-member-row {
     display: flex;
