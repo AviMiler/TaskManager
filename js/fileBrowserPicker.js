@@ -1,6 +1,8 @@
-// Content script injected into Chrome's built-in file:// pages.
-// Adds a "select" button next to each file/folder entry.
-// Re-injects buttons on every DOM change so other extensions can't kill them.
+// Content script injected into file:// pages.
+// Supports two layouts:
+// 1. Chrome's default directory listing (<a href> rows)
+// 2. "chrome-file-explorer" extension (.we-grid-item / .we-details-row)
+// Adds a pick button to each file/folder entry (based on mode).
 
 (function () {
     let browseMode = 'file';
@@ -13,7 +15,9 @@
         return href.endsWith('/');
     }
 
-    function injectButtons() {
+    // ── Chrome default file:// page ──
+
+    function injectDefaultButtons() {
         document.querySelectorAll('.tb-pick-btn').forEach(b => b.remove());
 
         document.querySelectorAll('a[href]').forEach((a) => {
@@ -21,13 +25,10 @@
 
             const href = a.href;
             const entryIsFolder = isFolder(href);
-
-            if ((browseMode === 'file' && entryIsFolder) || (browseMode === 'folder' && !entryIsFolder)) {
-                return;
-            }
+            if ((browseMode === 'file' && entryIsFolder) || (browseMode === 'folder' && !entryIsFolder)) return;
 
             const btn = document.createElement('button');
-            btn.textContent = browseMode === 'folder' ? 'בחר תיקייה' : 'בחר קובץ';
+            btn.textContent = entryIsFolder ? 'בחר תיקייה' : 'בחר קובץ';
             btn.className = 'tb-pick-btn';
             btn.style.cssText = 'margin-inline-start:8px;padding:2px 10px;font-size:13px;font-family:system-ui,sans-serif;background:#2563eb !important;color:#fff !important;border:none !important;border-radius:4px;cursor:pointer;vertical-align:middle;display:inline-block !important;visibility:visible !important;opacity:1 !important;position:relative !important;';
             btn.addEventListener('click', (e) => {
@@ -35,21 +36,105 @@
                 e.stopPropagation();
                 sendUrl(href);
             });
-
             a.insertAdjacentElement('afterend', btn);
         });
+    }
+
+    // ── chrome-file-explorer extension ──
+
+    function getExplorerEntries() {
+        return window.__weEntries || [];
+    }
+
+    function injectExplorerButtons() {
+        document.querySelectorAll('.tb-pick-btn').forEach(b => b.remove());
+
+        const entries = getExplorerEntries();
+        if (!entries.length) return;
+
+        const entryMap = {};
+        entries.forEach(e => { entryMap[e.name] = e; });
+
+        document.querySelectorAll('.we-grid-item').forEach((item) => {
+            const label = item.querySelector('.we-grid-item-label');
+            if (!label) return;
+
+            const name = label.textContent.trim();
+            const entry = entryMap[name] || entryMap[name + '/'];
+            if (!entry) return;
+
+            const entryIsFolder = entry.isDir;
+            if ((browseMode === 'file' && entryIsFolder) || (browseMode === 'folder' && !entryIsFolder)) return;
+
+            const btn = document.createElement('button');
+            btn.textContent = entryIsFolder ? 'בחר תיקייה' : 'בחר קובץ';
+            btn.className = 'tb-pick-btn';
+            Object.assign(btn.style, {
+                position: 'absolute', bottom: '-2px', left: '50%', transform: 'translateX(-50%)',
+                padding: '2px 8px', fontSize: '11px', fontFamily: 'system-ui,sans-serif',
+                background: '#2563eb', color: '#fff', border: 'none', borderRadius: '4px',
+                cursor: 'pointer', whiteSpace: 'nowrap', zIndex: '999999',
+                boxShadow: '0 1px 4px rgba(0,0,0,0.3)'
+            });
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                sendUrl(entry.url);
+            });
+
+            item.style.position = 'relative';
+            item.style.paddingBottom = '20px';
+            item.appendChild(btn);
+        });
+
+        document.querySelectorAll('.we-details-row').forEach((row) => {
+            const nameCell = row.querySelector('.we-details-name');
+            if (!nameCell) return;
+
+            const name = nameCell.textContent.trim();
+            const entry = entryMap[name] || entryMap[name + '/'];
+            if (!entry) return;
+
+            const entryIsFolder = entry.isDir;
+            if ((browseMode === 'file' && entryIsFolder) || (browseMode === 'folder' && !entryIsFolder)) return;
+
+            const btn = document.createElement('button');
+            btn.textContent = entryIsFolder ? 'בחר תיקייה' : 'בחר קובץ';
+            btn.className = 'tb-pick-btn';
+            btn.style.cssText = 'margin-inline-start:8px;padding:2px 10px;font-size:12px;font-family:system-ui,sans-serif;background:#2563eb;color:#fff;border:none;border-radius:4px;cursor:pointer;vertical-align:middle;';
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                sendUrl(entry.url);
+            });
+            nameCell.appendChild(btn);
+        });
+    }
+
+    // ── Bootstrap ──
+
+    function isExplorerActive() {
+        return !!document.querySelector('.we-root');
+    }
+
+    function inject() {
+        if (isExplorerActive()) {
+            injectExplorerButtons();
+        } else {
+            injectDefaultButtons();
+        }
     }
 
     chrome.runtime.sendMessage({ type: 'getFileBrowserMode' }, (mode) => {
         if (chrome.runtime.lastError || !mode) return;
         browseMode = mode;
 
-        injectButtons();
+        inject();
 
         let timeout;
         new MutationObserver(() => {
             clearTimeout(timeout);
-            timeout = setTimeout(injectButtons, 100);
+            timeout = setTimeout(inject, 200);
         }).observe(document.documentElement, { childList: true, subtree: true });
     });
 })();
