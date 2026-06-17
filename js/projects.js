@@ -452,21 +452,14 @@ function renderProjectDetails() {
     }).join('');
 
     const links = Array.isArray(project.links) ? project.links : [];
-    const linksHtml = links.map(l => {
-        const isVsc = l.url.startsWith('[#VSC#]');
-        const isFile = l.url.startsWith('file:');
-        const displayUrl = isVsc ? l.url.replace('[#VSC#]', '') : l.url;
-        const useAnchor = isFile && !isVsc;
-        const tag = useAnchor ? 'a' : 'div';
-        const extra = useAnchor ? `href="${escapeAttr(l.url)}"` : '';
-        return `
-        <${tag} class="project-link-btn" data-link-id="${l.id}" ${extra} title="${escapeAttr(displayUrl)}">
+    const linksHtml = links.map(l => `
+        <div class="project-link-btn" data-link-id="${l.id}" title="${escapeAttr(l.url.startsWith('[#VSC#]') ? l.url.replace('[#VSC#]', '') : l.url)}">
             <span class="project-link-icon">${renderLinkIcon(l.icon)}</span>
             <span class="project-link-name">${l.name}</span>
             <button class="project-link-edit" type="button" data-edit-link="${l.id}" aria-label="ערוך">✎</button>
             <button class="project-link-del" type="button" data-del-link="${l.id}" aria-label="מחק">×</button>
-        </${tag}>
-    `}).join('');
+        </div>
+    `).join('');
 
     panel.innerHTML = `
         <div class="project-details-body" style="--hue: ${hue};">
@@ -487,14 +480,21 @@ function renderProjectDetails() {
     const addBtn = panel.querySelector('#addLinkBtn');
     if (addBtn) addBtn.addEventListener('click', () => openLinkModal(project.id, null));
 
-    panel.querySelectorAll('div.project-link-btn').forEach(el => {
+    panel.querySelectorAll('.project-link-btn').forEach(el => {
         el.addEventListener('click', (e) => {
             if (e.target.closest('[data-edit-link]') || e.target.closest('[data-del-link]')) return;
-            const link = links.find(l => l.id === el.dataset.linkId);
+            const id = el.dataset.linkId;
+            const link = links.find(l => l.id === id);
             if (link && link.url) {
                 if (link.url.startsWith('[#VSC#]')) {
                     const path = link.url.replace('[#VSC#]', '').replace(/\\/g, '/');
                     window.location.href = 'vscode://file/' + path;
+                } else if (link.url.startsWith('file:')) {
+                    if (window.chrome && chrome.runtime && chrome.runtime.sendMessage) {
+                        chrome.runtime.sendMessage({ type: 'openLocalFile', url: link.url });
+                    } else {
+                        window.open(link.url, '_blank', 'noopener');
+                    }
                 } else {
                     window.open(link.url, '_blank', 'noopener');
                 }

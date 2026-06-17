@@ -891,10 +891,6 @@ input {
     gap: 6px;
 }
 
-a.project-link-btn {
-    text-decoration: none;
-    color: inherit;
-}
 .project-link-btn {
     display: flex;
     align-items: center;
