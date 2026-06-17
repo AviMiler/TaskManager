@@ -10,6 +10,10 @@ function updateUI() {
     renderProjectDetails();
     updateSelectorButton();
 
+    const detailsPage = document.getElementById('projectDetailsPage');
+    if (detailsPage) detailsPage.style.display = 'none';
+    document.getElementById('sidebarProjectDetailsBtn')?.classList.remove('active');
+
     if (currentProjectId) {
         const project = getProjects().find(p => p.id === currentProjectId);
         if (project) {
@@ -54,6 +58,11 @@ function setView(view) {
     });
     const board = document.getElementById('kanbanBoard');
     let list = document.getElementById('listView');
+    const detailsPage = document.getElementById('projectDetailsPage');
+    if (detailsPage) detailsPage.style.display = 'none';
+    document.getElementById('sidebarProjectDetailsBtn')?.classList.remove('active');
+    const pageHeader = document.querySelector('.page-header');
+    if (pageHeader) pageHeader.style.display = '';
     if (view === 'list') {
         board.style.display = 'none';
         if (!list) {

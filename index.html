@@ -79,18 +79,15 @@
         <div class="body">
             <!-- Sidebar -->
             <aside class="sidebar">
-                <!-- Project info — collapsible section -->
-                <section class="sidebar-section" id="sidebarInfoSection">
-                    <button class="sidebar-section-header" type="button" data-action="toggleSidebarSection('sidebarInfoSection')" aria-expanded="true">
-                        <span class="sidebar-section-title">פרטי פרויקט</span>
-                        <svg class="sidebar-section-chevron" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
-                    </button>
-                    <div class="sidebar-section-body" id="projectInfoBody">
-                        <div class="project-details-empty">בחר פרויקט להצגת פרטים</div>
-                    </div>
-                </section>
+                <!-- Project details button -->
+                <button class="sidebar-project-details-btn" id="sidebarProjectDetailsBtn" type="button" data-action="openProjectDetailsPage()" style="display:none;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/>
+                    </svg>
+                    <span>פרטי פרויקט</span>
+                </button>
 
-                <!-- Everything else (stats by stage + links) -->
+                <!-- Stats + links panel -->
                 <div class="project-details" id="projectDetails">
                     <div class="project-details-empty">בחר פרויקט להצגת פרטים</div>
                 </div>
@@ -141,6 +138,9 @@
                         </button>
                     </div>
                 </div>
+
+                <!-- Project Details Full Page -->
+                <div class="project-details-page" id="projectDetailsPage" style="display:none;"></div>
 
                 <!-- Kanban Board (columns rendered dynamically) -->
                 <div class="kanban-board" id="kanbanBoard"></div>

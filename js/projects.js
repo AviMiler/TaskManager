@@ -371,13 +371,14 @@ function updateSelectorButton() {
 
 function renderProjectDetails() {
     const panel = document.getElementById('projectDetails');
-    const infoBody = document.getElementById('projectInfoBody');
+    const detailsBtn = document.getElementById('sidebarProjectDetailsBtn');
     if (!panel) return;
 
     const project = currentProjectId ? getProjects().find(p => p.id === currentProjectId) : null;
 
+    if (detailsBtn) detailsBtn.style.display = project ? '' : 'none';
+
     if (!project) {
-        if (infoBody) infoBody.innerHTML = '<div class="project-details-empty">בחר פרויקט להצגת פרטים</div>';
         panel.innerHTML = '<div class="project-details-empty">בחר פרויקט להצגת פרטים</div>';
         return;
     }
@@ -386,21 +387,6 @@ function renderProjectDetails() {
     const tasks = getTasks(project.id);
     const cols = getColumns();
 
-    // ===== Section 1: project info (description + more-details button) =====
-    if (infoBody) {
-        const descHtml = project.description
-            ? `<div class="project-info-desc">${project.description}</div>`
-            : '<div class="project-info-desc project-info-desc-empty">אין תיאור</div>';
-
-        infoBody.innerHTML = `
-            ${descHtml}
-            <button class="project-info-settings-btn" type="button" data-action="openProjectSettings(${project.id}, event)">
-                ${ICONS.pencil}<span>פרטים נוספים</span>
-            </button>
-        `;
-    }
-
-    // ===== Section 3 (everything else): stats by stage + links =====
     const statsHtml = cols.map(col => {
         const count = tasks.filter(t => t.state === col.id).length;
         return `<div class="project-stat">
@@ -472,6 +458,182 @@ function renderProjectDetails() {
             e.preventDefault();
             e.stopPropagation();
             if (await showConfirm('למחוק את הקישור?')) deleteLink(project.id, btn.dataset.delLink);
+        });
+    });
+
+    const detailsPage = document.getElementById('projectDetailsPage');
+    if (detailsPage && detailsPage.style.display !== 'none') {
+        renderProjectDetailsPage(project);
+    }
+}
+
+function openProjectDetailsPage() {
+    const project = currentProjectId ? getProjects().find(p => p.id === currentProjectId) : null;
+    if (!project) return;
+
+    const page = document.getElementById('projectDetailsPage');
+    const board = document.getElementById('kanbanBoard');
+    const list = document.getElementById('listView');
+    const pageHeader = document.querySelector('.page-header');
+    const empty = document.getElementById('emptyState');
+    if (!page) return;
+
+    if (board) board.style.display = 'none';
+    if (list) list.style.display = 'none';
+    if (pageHeader) pageHeader.style.display = 'none';
+    if (empty) empty.style.display = 'none';
+    page.style.display = '';
+
+    document.getElementById('sidebarProjectDetailsBtn')?.classList.add('active');
+
+    renderProjectDetailsPage(project);
+}
+
+function closeProjectDetailsPage() {
+    const page = document.getElementById('projectDetailsPage');
+    const pageHeader = document.querySelector('.page-header');
+    if (page) page.style.display = 'none';
+    if (pageHeader) pageHeader.style.display = '';
+
+    document.getElementById('sidebarProjectDetailsBtn')?.classList.remove('active');
+
+    if (currentProjectId) {
+        if (currentView === 'list') {
+            setView('list');
+        } else {
+            const board = document.getElementById('kanbanBoard');
+            if (board) board.style.display = 'grid';
+            renderKanban();
+        }
+    } else {
+        const empty = document.getElementById('emptyState');
+        if (empty) empty.style.display = 'flex';
+    }
+}
+
+function renderProjectDetailsPage(project) {
+    const page = document.getElementById('projectDetailsPage');
+    if (!page || !project) return;
+
+    const hue = HUES[project.hueIdx || 0];
+    const createdDate = new Date(project.createdAt).toLocaleDateString('he-IL', { day: 'numeric', month: 'long', year: 'numeric' });
+    const tasks = getTasks(project.id);
+    const cols = getColumns();
+    const allMembers = getMembers();
+    const me = getUser();
+    const ownerId = String(project.ownerId ?? project.createdById ?? '');
+
+    let memberIds = (Array.isArray(project.memberIds) && project.memberIds.length)
+        ? project.memberIds.map(String)
+        : [ownerId].filter(Boolean);
+    memberIds = [...new Set(memberIds)];
+
+    const membersHtml = memberIds.length ? memberIds.map(mid => {
+        const m = allMembers.find(x => String(x.id) === mid);
+        const name = m ? m.name : mid;
+        const ini = initials(name) || (name || '').substring(0, 2);
+        const isOwner = mid === ownerId;
+        const isMe = mid === String(me.id);
+        return `
+        <div class="project-member-row">
+            <div class="avatar avatar-sm" style="--hue:${m ? m.hue : 200};">${escapeHtml(ini)}</div>
+            <span class="project-member-name">${escapeHtml(name)}</span>
+            ${isMe ? '<span class="team-me-badge">אני</span>' : ''}
+            ${isOwner ? '<span class="project-member-owner">בעלים</span>' : ''}
+        </div>`;
+    }).join('') : '<div class="project-details-empty">אין חברים בפרויקט</div>';
+
+    const statsHtml = cols.map(col => {
+        const count = tasks.filter(t => t.state === col.id).length;
+        return `<div class="project-stat">
+            <span class="project-stat-dot" style="--col-hue: ${col.hue};"></span>
+            <span class="project-stat-label">${col.name}</span>
+            <span class="project-stat-count">${count}</span>
+        </div>`;
+    }).join('');
+
+    const links = Array.isArray(project.links) ? project.links : [];
+    const linksHtml = links.map(l => `
+        <div class="project-link-btn" data-link-id="${l.id}" title="${escapeAttr(l.url.startsWith('[#VSC#]') ? l.url.replace('[#VSC#]', '') : l.url)}">
+            <span class="project-link-icon">${renderLinkIcon(l.icon)}</span>
+            <span class="project-link-name">${l.name}</span>
+        </div>
+    `).join('');
+
+    const descHtml = project.description
+        ? escapeHtml(project.description)
+        : '<span class="project-info-desc-empty">אין תיאור</span>';
+
+    page.innerHTML = `
+        <div class="pdp-header">
+            <button class="pdp-back" type="button" data-action="closeProjectDetailsPage()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+                <span>חזרה ללוח</span>
+            </button>
+            <h1 class="pdp-title">
+                <span class="project-dot" style="--hue:${hue};"></span>
+                ${escapeHtml(project.name)}
+            </h1>
+            <button class="pdp-settings-btn" type="button" data-action="openProjectSettings(${project.id}, event)">
+                ${ICONS.pencil}<span>הגדרות פרויקט</span>
+            </button>
+        </div>
+        <div class="pdp-body">
+            <div class="pdp-section">
+                <div class="pdp-section-label">תיאור</div>
+                <div class="pdp-desc">${descHtml}</div>
+            </div>
+            <div class="pdp-section">
+                <div class="pdp-section-label">פרטים</div>
+                <div class="pdp-meta-grid">
+                    <div class="pdp-meta-item">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                            <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                        </svg>
+                        <span>נוצר ${createdDate}</span>
+                    </div>
+                    ${project.createdBy ? `
+                    <div class="pdp-meta-item">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                        </svg>
+                        <span>נוצר ע״י ${escapeHtml(project.createdBy)}</span>
+                    </div>` : ''}
+                </div>
+            </div>
+            <div class="pdp-section">
+                <div class="pdp-section-label">חברי הפרויקט</div>
+                <div class="pdp-members">${membersHtml}</div>
+            </div>
+            <div class="pdp-section">
+                <div class="pdp-section-label">משימות לפי שלב</div>
+                <div class="project-stats">${statsHtml}</div>
+            </div>
+            ${links.length ? `
+            <div class="pdp-section">
+                <div class="pdp-section-label">קישורים</div>
+                <div class="project-links pdp-links">${linksHtml}</div>
+            </div>` : ''}
+        </div>
+    `;
+
+    page.querySelectorAll('.project-link-btn').forEach(el => {
+        el.addEventListener('click', () => {
+            const id = el.dataset.linkId;
+            const link = links.find(l => l.id === id);
+            if (link && link.url) {
+                if (link.url.startsWith('[#VSC#]')) {
+                    window.location.href = 'vscode://file/' + link.url.replace('[#VSC#]', '').replace(/\\/g, '/');
+                } else if (link.url.startsWith('file:')) {
+                    if (window.chrome && chrome.runtime && chrome.runtime.sendMessage) {
+                        chrome.runtime.sendMessage({ type: 'openLocalFile', url: link.url });
+                    } else {
+                        window.open(link.url, '_blank', 'noopener');
+                    }
+                } else {
+                    window.open(link.url, '_blank', 'noopener');
+                }
+            }
         });
     });
 }

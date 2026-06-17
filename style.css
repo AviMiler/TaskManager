@@ -706,6 +706,166 @@ input {
     display: none;
 }
 
+/* Sidebar project details button */
+.sidebar-project-details-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: calc(100% - 20px);
+    margin: 10px 10px 0;
+    padding: 9px 12px;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    color: var(--ink-s);
+    font-size: 12.5px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.sidebar-project-details-btn:hover {
+    border-color: var(--line-h);
+    color: var(--ink);
+    background: #eff2f7;
+}
+
+.sidebar-project-details-btn.active {
+    border-color: var(--blue);
+    color: var(--blue);
+    background: var(--blue-bg);
+}
+
+/* Project Details Full Page */
+.project-details-page {
+    padding: 28px 36px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.pdp-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+}
+
+.pdp-back {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    color: var(--ink-s);
+    font-size: 12.5px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+}
+
+.pdp-back:hover {
+    border-color: var(--line-h);
+    color: var(--ink);
+}
+
+.pdp-title {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--ink);
+}
+
+.pdp-title .project-dot {
+    width: 10px;
+    height: 10px;
+}
+
+.pdp-settings-btn {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 14px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    color: var(--ink-s);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.pdp-settings-btn:hover {
+    border-color: var(--blue);
+    color: var(--blue);
+    background: #f0f7ff;
+}
+
+.pdp-body {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+}
+
+.pdp-section {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    padding: 18px 20px;
+}
+
+.pdp-section-label {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--ink-f);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+}
+
+.pdp-desc {
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: var(--ink-s);
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.pdp-meta-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.pdp-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12.5px;
+    color: var(--ink-s);
+}
+
+.pdp-meta-item svg {
+    flex-shrink: 0;
+    color: var(--ink-f);
+}
+
+.pdp-members {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.pdp-links .project-link-btn {
+    cursor: pointer;
+}
+
 .project-info-desc {
     font-size: 12.5px;
     line-height: 1.5;
