@@ -17,13 +17,14 @@
     }
 
     function addEntryPickButton(anchor) {
-        if (anchor.dataset.tbPicked) return;
-        anchor.dataset.tbPicked = '1';
-
         const href = anchor.href;
         const entryIsFolder = isFolder(href);
 
         if ((browseMode === 'file' && entryIsFolder) || (browseMode === 'folder' && !entryIsFolder)) {
+            return;
+        }
+
+        if (anchor.nextElementSibling && anchor.nextElementSibling.classList.contains('tb-pick-btn')) {
             return;
         }
 
