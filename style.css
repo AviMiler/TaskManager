@@ -945,10 +945,8 @@ input {
 }
 
 .project-details-body {
-    padding: 12px 16px;
     display: flex;
     flex-direction: column;
-    gap: 12px;
 }
 
 .project-details-section-label {

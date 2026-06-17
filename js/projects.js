@@ -408,17 +408,31 @@ function renderProjectDetails() {
 
     panel.innerHTML = `
         <div class="project-details-body" style="--hue: ${hue};">
-            <div class="project-details-section-label">משימות לפי שלב</div>
-            <div class="project-stats">${statsHtml}</div>
-
-            <div class="project-details-section-label">קישורים</div>
-            <div class="project-links">
-                ${linksHtml}
-                <button class="project-link-add" type="button" id="addLinkBtn">
-                    <span class="project-link-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14"/><path d="M5 12h14"/></svg></span>
-                    <span class="project-link-name">הוסף קישור</span>
+            <section class="sidebar-section" id="sidebarStatsSection">
+                <button class="sidebar-section-header" type="button" data-action="toggleSidebarSection('sidebarStatsSection')" aria-expanded="true">
+                    <span class="sidebar-section-title">משימות לפי שלב</span>
+                    <svg class="sidebar-section-chevron" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
                 </button>
-            </div>
+                <div class="sidebar-section-body">
+                    <div class="project-stats">${statsHtml}</div>
+                </div>
+            </section>
+
+            <section class="sidebar-section" id="sidebarLinksSection">
+                <button class="sidebar-section-header" type="button" data-action="toggleSidebarSection('sidebarLinksSection')" aria-expanded="true">
+                    <span class="sidebar-section-title">קישורים</span>
+                    <svg class="sidebar-section-chevron" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+                </button>
+                <div class="sidebar-section-body">
+                    <div class="project-links">
+                        ${linksHtml}
+                        <button class="project-link-add" type="button" id="addLinkBtn">
+                            <span class="project-link-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14"/><path d="M5 12h14"/></svg></span>
+                            <span class="project-link-name">הוסף קישור</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
         </div>
     `;
 
