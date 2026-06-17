@@ -456,13 +456,11 @@ function renderProjectDetails() {
         const isVsc = l.url.startsWith('[#VSC#]');
         const isFile = l.url.startsWith('file:');
         const displayUrl = isVsc ? l.url.replace('[#VSC#]', '') : l.url;
-        const href = isVsc ? 'vscode://file/' + l.url.replace('[#VSC#]', '').replace(/\\/g, '/') : l.url;
-        const useAnchor = isFile || isVsc;
+        const useAnchor = isFile && !isVsc;
         const tag = useAnchor ? 'a' : 'div';
-        const extra = useAnchor ? `href="${escapeAttr(href)}"` : '';
-        const target = (!useAnchor && !isFile) ? 'target="_blank" rel="noopener"' : '';
+        const extra = useAnchor ? `href="${escapeAttr(l.url)}"` : '';
         return `
-        <${tag} class="project-link-btn" data-link-id="${l.id}" ${extra} ${target} title="${escapeAttr(displayUrl)}">
+        <${tag} class="project-link-btn" data-link-id="${l.id}" ${extra} title="${escapeAttr(displayUrl)}">
             <span class="project-link-icon">${renderLinkIcon(l.icon)}</span>
             <span class="project-link-name">${l.name}</span>
             <button class="project-link-edit" type="button" data-edit-link="${l.id}" aria-label="ערוך">✎</button>
@@ -493,7 +491,14 @@ function renderProjectDetails() {
         el.addEventListener('click', (e) => {
             if (e.target.closest('[data-edit-link]') || e.target.closest('[data-del-link]')) return;
             const link = links.find(l => l.id === el.dataset.linkId);
-            if (link && link.url) window.open(link.url, '_blank', 'noopener');
+            if (link && link.url) {
+                if (link.url.startsWith('[#VSC#]')) {
+                    const path = link.url.replace('[#VSC#]', '').replace(/\\/g, '/');
+                    window.location.href = 'vscode://file/' + path;
+                } else {
+                    window.open(link.url, '_blank', 'noopener');
+                }
+            }
         });
     });
     panel.querySelectorAll('[data-edit-link]').forEach(btn => {
