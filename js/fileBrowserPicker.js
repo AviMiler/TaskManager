@@ -1,11 +1,11 @@
 // Content script injected into Chrome's built-in file:// pages (directory
-// listings or file views). Adds checkboxes next to file/folder entries so
-// the user can pick one, then confirm with a floating button.
+// listings or file views). Adds a "select" button next to each matching
+// entry (file or folder, depending on mode). Clicking the button immediately
+// sends the chosen URL back to TaskBoard — no extra confirm step needed.
 // The mode ('file' or 'folder') is received from the background service
-// worker and controls which entries get checkboxes.
+// worker and controls which entries get a button.
 
 (function () {
-    let selectedUrl = null;
     let browseMode = 'file';
 
     function sendUrl(url) {
@@ -27,32 +27,16 @@
             return;
         }
 
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.title = browseMode === 'folder' ? 'סמן תיקייה זו לבחירה' : 'סמן קובץ זה לבחירה';
-        checkbox.style.marginInlineStart = '6px';
-        checkbox.style.cursor = 'pointer';
-        checkbox.style.width = '16px';
-        checkbox.style.height = '16px';
-        checkbox.style.verticalAlign = 'middle';
-
-        checkbox.addEventListener('click', (e) => {
+        const btn = document.createElement('button');
+        btn.textContent = browseMode === 'folder' ? 'בחר תיקייה' : 'בחר קובץ';
+        btn.className = 'tb-pick-btn';
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
             e.stopPropagation();
+            sendUrl(href);
         });
 
-        checkbox.addEventListener('change', () => {
-            if (checkbox.checked) {
-                document.querySelectorAll('input[data-tb-checkbox="1"]').forEach((cb) => {
-                    if (cb !== checkbox) cb.checked = false;
-                });
-                selectedUrl = href;
-            } else if (selectedUrl === href) {
-                selectedUrl = null;
-            }
-        });
-        checkbox.dataset.tbCheckbox = '1';
-
-        anchor.insertAdjacentElement('afterend', checkbox);
+        anchor.insertAdjacentElement('afterend', btn);
     }
 
     function scanEntries() {
@@ -73,27 +57,21 @@
             table#dir-content tr, table#dir-content td { font-size: 16px !important; line-height: 2.2 !important; }
             table#dir-content td { padding-top: 6px !important; padding-bottom: 6px !important; }
             a[href^="file://"] { font-size: 16px !important; }
+            .tb-pick-btn {
+                margin-inline-start: 8px;
+                padding: 2px 10px;
+                font-size: 13px;
+                font-family: system-ui, sans-serif;
+                background: #2563eb;
+                color: #fff;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+                vertical-align: middle;
+            }
+            .tb-pick-btn:hover { background: #1d4ed8; }
         `;
         document.documentElement.appendChild(style);
-
-        const pageBtn = document.createElement('button');
-        const label = browseMode === 'folder' ? '✓ אישור בחירת תיקייה ל-TaskBoard' : '✓ אישור בחירת קובץ ל-TaskBoard';
-        pageBtn.textContent = label;
-        pageBtn.style.position = 'fixed';
-        pageBtn.style.bottom = '12px';
-        pageBtn.style.left = '12px';
-        pageBtn.style.zIndex = '2147483647';
-        pageBtn.style.padding = '10px 16px';
-        pageBtn.style.fontSize = '14px';
-        pageBtn.style.fontFamily = 'system-ui, sans-serif';
-        pageBtn.style.background = '#2563eb';
-        pageBtn.style.color = '#fff';
-        pageBtn.style.border = 'none';
-        pageBtn.style.borderRadius = '6px';
-        pageBtn.style.cursor = 'pointer';
-        pageBtn.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
-        pageBtn.addEventListener('click', () => sendUrl(selectedUrl || location.href));
-        document.documentElement.appendChild(pageBtn);
 
         scanEntries();
         new MutationObserver(scanEntries).observe(document.documentElement, { childList: true, subtree: true });
