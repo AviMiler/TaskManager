@@ -49,6 +49,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     // Content script asks what mode it should operate in.
     if (msg && msg.type === 'getFileBrowserMode' && sender.tab) {
         const entry = openerTabByBrowserTab.get(sender.tab.id);
-        sendResponse(entry ? entry.mode : 'file');
+        sendResponse(entry ? entry.mode : null);
     }
 });
