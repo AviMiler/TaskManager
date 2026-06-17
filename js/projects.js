@@ -517,52 +517,14 @@ function renderProjectDetailsPage(project) {
 
     const hue = HUES[project.hueIdx || 0];
     const createdDate = new Date(project.createdAt).toLocaleDateString('he-IL', { day: 'numeric', month: 'long', year: 'numeric' });
-    const tasks = getTasks(project.id);
-    const cols = getColumns();
     const allMembers = getMembers();
     const me = getUser();
-    const ownerId = String(project.ownerId ?? project.createdById ?? '');
+    const currentOwnerId = project.ownerId ?? project.createdById;
 
     let memberIds = (Array.isArray(project.memberIds) && project.memberIds.length)
         ? project.memberIds.map(String)
-        : [ownerId].filter(Boolean);
+        : [currentOwnerId, me.id].filter(Boolean).map(String);
     memberIds = [...new Set(memberIds)];
-
-    const membersHtml = memberIds.length ? memberIds.map(mid => {
-        const m = allMembers.find(x => String(x.id) === mid);
-        const name = m ? m.name : mid;
-        const ini = initials(name) || (name || '').substring(0, 2);
-        const isOwner = mid === ownerId;
-        const isMe = mid === String(me.id);
-        return `
-        <div class="project-member-row">
-            <div class="avatar avatar-sm" style="--hue:${m ? m.hue : 200};">${escapeHtml(ini)}</div>
-            <span class="project-member-name">${escapeHtml(name)}</span>
-            ${isMe ? '<span class="team-me-badge">אני</span>' : ''}
-            ${isOwner ? '<span class="project-member-owner">בעלים</span>' : ''}
-        </div>`;
-    }).join('') : '<div class="project-details-empty">אין חברים בפרויקט</div>';
-
-    const statsHtml = cols.map(col => {
-        const count = tasks.filter(t => t.state === col.id).length;
-        return `<div class="project-stat">
-            <span class="project-stat-dot" style="--col-hue: ${col.hue};"></span>
-            <span class="project-stat-label">${col.name}</span>
-            <span class="project-stat-count">${count}</span>
-        </div>`;
-    }).join('');
-
-    const links = Array.isArray(project.links) ? project.links : [];
-    const linksHtml = links.map(l => `
-        <div class="project-link-btn" data-link-id="${l.id}" title="${escapeAttr(l.url.startsWith('[#VSC#]') ? l.url.replace('[#VSC#]', '') : l.url)}">
-            <span class="project-link-icon">${renderLinkIcon(l.icon)}</span>
-            <span class="project-link-name">${l.name}</span>
-        </div>
-    `).join('');
-
-    const descHtml = project.description
-        ? escapeHtml(project.description)
-        : '<span class="project-info-desc-empty">אין תיאור</span>';
 
     page.innerHTML = `
         <div class="pdp-header">
@@ -570,70 +532,156 @@ function renderProjectDetailsPage(project) {
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
                 <span>חזרה ללוח</span>
             </button>
-            <h1 class="pdp-title">
-                <span class="project-dot" style="--hue:${hue};"></span>
-                ${escapeHtml(project.name)}
-            </h1>
-            <button class="pdp-settings-btn" type="button" data-action="openProjectSettings(${project.id}, event)">
-                ${ICONS.pencil}<span>הגדרות פרויקט</span>
-            </button>
+            <div class="pdp-meta-inline">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                    <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                <span>נוצר ${createdDate}${project.createdBy ? ` ע״י ${escapeHtml(project.createdBy)}` : ''}</span>
+            </div>
         </div>
         <div class="pdp-body">
-            <div class="pdp-section">
-                <div class="pdp-section-label">תיאור</div>
-                <div class="pdp-desc">${descHtml}</div>
-            </div>
-            <div class="pdp-section">
-                <div class="pdp-section-label">פרטים</div>
-                <div class="pdp-meta-grid">
-                    <div class="pdp-meta-item">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                            <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-                        </svg>
-                        <span>נוצר ${createdDate}</span>
-                    </div>
-                    ${project.createdBy ? `
-                    <div class="pdp-meta-item">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
-                        </svg>
-                        <span>נוצר ע״י ${escapeHtml(project.createdBy)}</span>
-                    </div>` : ''}
+            <div class="pdp-section pdp-section-wide">
+                <div class="field">
+                    <label class="field-label">שם הפרויקט *</label>
+                    <input type="text" id="pdpProjectName" class="field-input" value="${escapeAttr(project.name)}" placeholder="שם הפרויקט">
+                </div>
+                <div class="field">
+                    <label class="field-label">תיאור</label>
+                    <textarea id="pdpProjectDescription" class="field-textarea" placeholder="תיאור הפרויקט...">${project.description || ''}</textarea>
                 </div>
             </div>
             <div class="pdp-section">
-                <div class="pdp-section-label">חברי הפרויקט</div>
-                <div class="pdp-members">${membersHtml}</div>
+                <div class="field">
+                    <label class="field-label">צבע פרויקט</label>
+                    <div class="color-swatches" id="pdpColorSwatches">
+                        ${HUES.map((h, idx) => `<button class="color-swatch${idx === project.hueIdx ? ' selected' : ''}" type="button" data-hue-idx="${idx}" style="background: hsl(${h}, 70%, 55%);" aria-label="צבע ${idx}"></button>`).join('')}
+                    </div>
+                </div>
+                <div class="field">
+                    <label class="field-label">סטטוס</label>
+                    <select id="pdpProjectStatus" class="field-select">
+                        <option value="active" ${(project.status || 'active') === 'active' ? 'selected' : ''}>פעיל</option>
+                        <option value="archived" ${project.status === 'archived' ? 'selected' : ''}>בארכיון</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label class="field-label">שייך ל</label>
+                    <select id="pdpProjectOwner" class="field-select">
+                        ${allMembers.slice().sort((a, b) => (a.name || '').localeCompare(b.name || '', 'he'))
+                            .map(m => `<option value="${m.id}" ${String(currentOwnerId) === String(m.id) ? 'selected' : ''}>${escapeHtml(m.name)}</option>`)
+                            .join('')}
+                    </select>
+                </div>
             </div>
-            <div class="pdp-section">
-                <div class="pdp-section-label">משימות לפי שלב</div>
-                <div class="project-stats">${statsHtml}</div>
+            <div class="pdp-section pdp-section-wide">
+                <div class="field">
+                    <label class="field-label">חברי הפרויקט</label>
+                    <div id="pdpMembersList"></div>
+                    <div style="display:flex; gap:6px; margin-top:6px;">
+                        <select id="pdpAddMemberSelect" class="field-select"></select>
+                        <button class="btn-secondary" type="button" id="pdpAddMemberBtn">הוסף</button>
+                    </div>
+                </div>
             </div>
-            ${links.length ? `
-            <div class="pdp-section">
-                <div class="pdp-section-label">קישורים</div>
-                <div class="project-links pdp-links">${linksHtml}</div>
-            </div>` : ''}
+            <div class="pdp-actions">
+                <button class="btn-primary" type="button" id="pdpSaveBtn">שמור שינויים</button>
+            </div>
         </div>
     `;
 
-    page.querySelectorAll('.project-link-btn').forEach(el => {
-        el.addEventListener('click', () => {
-            const id = el.dataset.linkId;
-            const link = links.find(l => l.id === id);
-            if (link && link.url) {
-                if (link.url.startsWith('[#VSC#]')) {
-                    window.location.href = 'vscode://file/' + link.url.replace('[#VSC#]', '').replace(/\\/g, '/');
-                } else if (link.url.startsWith('file:')) {
-                    if (window.chrome && chrome.runtime && chrome.runtime.sendMessage) {
-                        chrome.runtime.sendMessage({ type: 'openLocalFile', url: link.url });
-                    } else {
-                        window.open(link.url, '_blank', 'noopener');
-                    }
-                } else {
-                    window.open(link.url, '_blank', 'noopener');
-                }
-            }
+    // Color swatches
+    page.querySelectorAll('#pdpColorSwatches .color-swatch').forEach(swatch => {
+        swatch.addEventListener('click', function() {
+            page.querySelectorAll('#pdpColorSwatches .color-swatch').forEach(s => s.classList.remove('selected'));
+            this.classList.add('selected');
         });
     });
+
+    // Members management
+    const membersListEl = page.querySelector('#pdpMembersList');
+    const addSelectEl = page.querySelector('#pdpAddMemberSelect');
+    const addBtnEl = page.querySelector('#pdpAddMemberBtn');
+    page._getMemberIds = () => memberIds;
+
+    const renderMembers = () => {
+        const allM = getMembers();
+        membersListEl.innerHTML = memberIds.map(mid => {
+            const m = allM.find(x => String(x.id) === mid);
+            const name = m ? m.name : mid;
+            const ini = initials(name) || (name || '').substring(0, 2);
+            const isMe = mid === String(me.id);
+            return `
+            <div class="team-row" data-member-id="${escapeAttr(mid)}">
+                <div class="avatar avatar-sm" style="--hue:${m ? m.hue : 200};">${escapeHtml(ini)}</div>
+                <span class="user-name">${escapeHtml(name)}${isMe ? ' <span class="team-me-badge">אני</span>' : ''}</span>
+                <button class="manage-type-delete" type="button" data-remove-member="${escapeAttr(mid)}" aria-label="הסר">×</button>
+            </div>`;
+        }).join('');
+
+        membersListEl.querySelectorAll('[data-remove-member]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                memberIds = memberIds.filter(mid => mid !== btn.dataset.removeMember);
+                renderMembers();
+            });
+        });
+
+        const available = allM.filter(m => !memberIds.includes(String(m.id)))
+            .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'he'));
+        if (available.length) {
+            addSelectEl.innerHTML = available.map(m => `<option value="${m.id}">${escapeHtml(m.name)}</option>`).join('');
+            addSelectEl.disabled = false;
+            addBtnEl.disabled = false;
+        } else {
+            addSelectEl.innerHTML = '<option value="">אין אנשים זמינים — כל אחד מצטרף בעצמו דרך כניסה עם ת"ז</option>';
+            addSelectEl.disabled = true;
+            addBtnEl.disabled = true;
+        }
+    };
+
+    addBtnEl.addEventListener('click', () => {
+        const val = addSelectEl.value;
+        if (!val) return;
+        if (!memberIds.includes(val)) memberIds.push(val);
+        renderMembers();
+    });
+
+    renderMembers();
+
+    // Save button
+    page.querySelector('#pdpSaveBtn').addEventListener('click', () => {
+        saveProjectFromDetailsPage(project.id);
+    });
+}
+
+function saveProjectFromDetailsPage(id) {
+    const page = document.getElementById('projectDetailsPage');
+    const name = document.getElementById('pdpProjectName').value.trim();
+    if (!name) {
+        showAlert('שם הפרויקט חובה');
+        return;
+    }
+
+    const description = document.getElementById('pdpProjectDescription').value.trim();
+    const status = document.getElementById('pdpProjectStatus').value;
+    const selectedSwatch = page.querySelector('#pdpColorSwatches .color-swatch.selected');
+    const hueIdx = selectedSwatch ? parseInt(selectedSwatch.dataset.hueIdx) : 0;
+    const ownerId = document.getElementById('pdpProjectOwner').value;
+    const memberIds = page._getMemberIds ? page._getMemberIds() : null;
+
+    const projects = getProjects();
+    const project = projects.find(p => p.id === id);
+    if (!project) return;
+
+    project.name = escapeHtml(name);
+    project.description = escapeHtml(description);
+    project.status = status;
+    project.hueIdx = hueIdx;
+    project.ownerId = ownerId;
+    if (memberIds) project.memberIds = memberIds;
+    project.updatedAt = new Date().toISOString();
+
+    saveProjects(projects);
+    loadProjects();
+    updateUI();
+    openProjectDetailsPage();
 }
