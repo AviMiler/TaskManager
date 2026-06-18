@@ -136,6 +136,7 @@ async function deleteColumn(id) {
     const ok = await showConfirm(`למחוק את העמודה "${unescapeForInput(col.name)}"?`);
     if (!ok) return;
     saveColumns(columns.filter(c => c.id !== id));
+    if (window.FSSync) FSSync.recordColumnTombstone(id);
     renderKanban();
     renderProjectDetails();
 }

@@ -109,6 +109,7 @@ const FSSync = {
     saving: false,
     pendingTombstones: [],
     pendingMemberTombstones: [],
+    pendingColumnTombstones: [],
     pollTimer: null,
     lastSeenMtime: 0,
     boundOnVisible: null,
@@ -298,6 +299,11 @@ const FSSync = {
         this.scheduleSave();
     },
 
+    recordColumnTombstone(colId) {
+        this.pendingColumnTombstones.push({ id: colId, deletedAt: new Date().toISOString() });
+        this.scheduleSave();
+    },
+
     // ===== Auto-sync: pick up other clients' changes without a reload =====
     FS_POLL_INTERVAL_MS: 4000,
 
@@ -352,10 +358,11 @@ const FSSync = {
 
         const tombstones = remote.tombstones || [];
         const memberTombstones = remote.memberTombstones || [];
+        const columnTombstones = remote.columnTombstones || [];
 
         localStorage.setItem(DB.tasks, JSON.stringify(mergeById(getAllTasks(), remote.tasks || [], tombstones)));
         localStorage.setItem(DB.projects, JSON.stringify(mergeById(getProjects(), remote.projects || [])));
-        localStorage.setItem(DB.columns, JSON.stringify(mergeById(getColumns(), remote.columns || [])));
+        localStorage.setItem(DB.columns, JSON.stringify(mergeById(getColumns(), remote.columns || [], columnTombstones)));
         localStorage.setItem(DB.taskTypes, JSON.stringify(mergeById(getTaskTypes(), remote.taskTypes || [])));
         localStorage.setItem(DB.members, JSON.stringify(mergeById(getMembers(), remote.members || [], memberTombstones)));
         localStorage.setItem(DB.dailies, JSON.stringify(mergeDailies(getDailies(), remote.dailies || [])));
@@ -390,9 +397,10 @@ const FSSync = {
 
                 const tombstones = mergeTombstones(remote.tombstones || [], this.pendingTombstones);
                 const memberTombstones = mergeTombstones(remote.memberTombstones || [], this.pendingMemberTombstones);
+                const columnTombstones = mergeTombstones(remote.columnTombstones || [], this.pendingColumnTombstones);
                 const mergedTasks = mergeById(remote.tasks || [], getAllTasks(), tombstones);
                 const mergedProjects = mergeById(remote.projects || [], getProjects());
-                const mergedColumns = mergeById(remote.columns || [], getColumns());
+                const mergedColumns = mergeById(remote.columns || [], getColumns(), columnTombstones);
                 const mergedTypes = mergeById(remote.taskTypes || [], getTaskTypes());
                 const mergedMembers = mergeById(remote.members || [], getMembers(), memberTombstones);
                 const mergedDailies = mergeDailies(remote.dailies || [], getDailies());
@@ -430,6 +438,7 @@ const FSSync = {
                     workspace: mergedWorkspace,
                     tombstones,
                     memberTombstones,
+                    columnTombstones,
                     lastModified: new Date().toISOString(),
                     lastModifiedBy: getUser().name,
                     lastModifiedById: getUser().id
@@ -443,6 +452,7 @@ const FSSync = {
                 // Only clear pending tombstones once they are safely persisted.
                 this.pendingTombstones = [];
                 this.pendingMemberTombstones = [];
+                this.pendingColumnTombstones = [];
                 localStorage.setItem(DB.tasks, JSON.stringify(merged.mergedTasks));
                 localStorage.setItem(DB.projects, JSON.stringify(merged.mergedProjects));
                 localStorage.setItem(DB.columns, JSON.stringify(merged.mergedColumns));
