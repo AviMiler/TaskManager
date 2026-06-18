@@ -17,9 +17,33 @@
             <div class="topbar-brand">TaskBoard</div>
             <div class="topbar-divider"></div>
             <div class="topbar-breadcrumb">
-                <span class="breadcrumb-label">Workspace</span>
+                <button class="breadcrumb-workspace" type="button" id="workspaceBtn" title="שם הצוות — לחץ לעריכה" aria-label="שם הצוות" data-action="editWorkspaceName()">
+                    <svg class="breadcrumb-workspace-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                    </svg>
+                    <span class="breadcrumb-workspace-name" id="workspaceName">Workspace</span>
+                </button>
                 <span class="breadcrumb-sep">/</span>
-                <span class="breadcrumb-project" id="currentProjectName">ביטוח לאומי</span>
+                <div class="breadcrumb-project-wrap">
+                    <button class="breadcrumb-project" id="projectSelectorBtn" type="button" aria-haspopup="listbox" aria-expanded="false">
+                        <span class="project-dot" id="selectorDot"></span>
+                        <span class="breadcrumb-project-name" id="currentProjectName">בחר פרויקט</span>
+                        <svg class="selector-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                            <path d="M6 9l6 6 6-6"/>
+                        </svg>
+                    </button>
+                    <div class="project-dropdown" id="projectDropdown" role="listbox">
+                        <button class="mine-only-toggle" id="mineOnlyToggle" type="button" role="switch" aria-checked="false" data-action="toggleMineOnly()">
+                            <span class="mine-only-switch"></span>
+                            <span class="mine-only-label">הצג רק את הפרויקטים שלי</span>
+                        </button>
+                        <div class="projects-list" id="projectsList"></div>
+                        <div class="sidebar-add">
+                            <input class="sidebar-input" type="text" placeholder="פרויקט חדש…" id="newProjectInput" aria-label="שם פרויקט חדש">
+                            <button class="sidebar-add-btn" type="button" aria-label="הוסף פרויקט">+</button>
+                        </div>
+                    </div>
+                </div>
             </div>
             <div class="topbar-search-wrap">
                 <svg class="topbar-search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
@@ -27,6 +51,11 @@
                 </svg>
                 <input class="topbar-search" type="text" placeholder="חיפוש משימות, פרויקטים…" id="searchInput">
             </div>
+            <button class="topbar-icon-btn" type="button" title="דיילי" aria-label="דיילי">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                    <rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/>
+                </svg>
+            </button>
             <button class="topbar-icon-btn" type="button" title="התראות" aria-label="התראות">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
                     <path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
@@ -37,33 +66,30 @@
                     <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/>
                 </svg>
             </button>
-            <div class="avatar" style="--hue: 200;">ד"ג</div>
+            <button class="topbar-user" type="button" title="פרופיל המשתמש" aria-label="פרופיל המשתמש" data-action="openUserProfileModal()">
+                <span class="avatar avatar-sm" id="topUserAvatar">אא</span>
+                <span class="topbar-user-meta">
+                    <span class="topbar-user-name" id="topUserName">משתמש</span>
+                    <span class="topbar-user-role" id="topUserRole"></span>
+                </span>
+            </button>
         </div>
 
         <!-- Body -->
         <div class="body">
             <!-- Sidebar -->
             <aside class="sidebar">
-                <div class="sidebar-header">
-                    <span class="sidebar-title">פרויקטים</span>
-                    <span class="sidebar-count" id="projectCount">0</span>
-                </div>
-                <div class="projects-list" id="projectsList"></div>
-                <div class="sidebar-add">
-                    <input class="sidebar-input" type="text" placeholder="פרויקט חדש…" id="newProjectInput" aria-label="שם פרויקט חדש">
-                    <button class="sidebar-add-btn" type="button" aria-label="הוסף פרויקט">+</button>
-                </div>
-                <div class="user-card">
-                    <div class="avatar" style="--hue: 200;">ד"ג</div>
-                    <div class="user-meta">
-                        <div class="user-name">דנה גולן</div>
-                        <div class="user-role">מנהל פרויקטים</div>
-                    </div>
-                    <button class="icon-btn-small" type="button" aria-label="עוד אפשרויות">
-                        <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
-                            <circle cx="2" cy="6" r="1.1"/><circle cx="6" cy="6" r="1.1"/><circle cx="10" cy="6" r="1.1"/>
-                        </svg>
-                    </button>
+                <!-- Project details button -->
+                <button class="sidebar-project-details-btn" id="sidebarProjectDetailsBtn" type="button" data-action="openProjectDetailsPage()" style="display:none;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/>
+                    </svg>
+                    <span>פרטי פרויקט</span>
+                </button>
+
+                <!-- Stats + links panel -->
+                <div class="project-details" id="projectDetails">
+                    <div class="project-details-empty">בחר פרויקט להצגת פרטים</div>
                 </div>
             </aside>
 
@@ -113,17 +139,57 @@
                     </div>
                 </div>
 
+                <!-- Project Details Full Page -->
+                <div class="project-details-page" id="projectDetailsPage" style="display:none;"></div>
+
                 <!-- Kanban Board (columns rendered dynamically) -->
                 <div class="kanban-board" id="kanbanBoard"></div>
 
                 <!-- Empty State -->
                 <div class="empty-state" id="emptyState">
-                    <p>👈 בחר פרויקט מהשמאל כדי להתחיל</p>
+                    <div class="empty-state-inner">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.3"><rect x="4" y="5" width="5" height="14"/><rect x="15" y="5" width="5" height="8"/></svg>
+                        <p>בחר פרויקט מהרשימה כדי להתחיל</p>
+                    </div>
                 </div>
             </main>
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <!-- APP_CONFIG moved to an external file: Manifest V3 extension pages
+         disallow inline <script> blocks under the default CSP. -->
+    <script src="config.js"></script>
+    <script src="store/ids.js"></script>
+    <script src="store/Store.js"></script>
+    <script src="store/LocalJsonStore.js"></script>
+    <script src="store/HttpStore.js"></script>
+    <script src="store/index.js"></script>
+    <script src="fsSync.js"></script>
+    <!-- App code, split from the former monolithic script.js into focused
+         modules. Loaded as plain (non-module) scripts so they share one global
+         scope exactly as before. Order matters only for: state.js first
+         (defines shared constants/state) and globals.js last (exposes the
+         already-defined functions on window). -->
+    <script src="js/state.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/dialogs.js"></script>
+    <script src="js/storage.js"></script>
+    <script src="js/members.js"></script>
+    <script src="js/user.js"></script>
+    <script src="js/projects.js"></script>
+    <script src="js/links.js"></script>
+    <script src="js/tasks.js"></script>
+    <script src="js/kanban.js"></script>
+    <script src="js/modal.js"></script>
+    <script src="js/daily.js"></script>
+    <script src="js/search.js"></script>
+    <script src="js/filters.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/menus.js"></script>
+    <script src="js/settings.js"></script>
+    <script src="js/events.js"></script>
+    <script src="js/globals.js"></script>
+    <!-- CSP-safe replacement for inline onclick="" handlers (see actions.js). -->
+    <script src="actions.js"></script>
 </body>
 </html>
