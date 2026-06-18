@@ -557,11 +557,11 @@ function renderProjectDetailsPage(project) {
             <div class="pdp-section pdp-section-wide">
                 <div class="field">
                     <label class="field-label">שם הפרויקט *</label>
-                    <input type="text" id="pdpProjectName" class="field-input" value="${escapeAttr(project.name)}" placeholder="שם הפרויקט">
+                    <input type="text" id="pdpProjectName" class="field-input" value="${escapeAttr(unescapeForInput(project.name))}" placeholder="שם הפרויקט">
                 </div>
                 <div class="field">
                     <label class="field-label">תיאור</label>
-                    <textarea id="pdpProjectDescription" class="field-textarea" placeholder="תיאור הפרויקט...">${project.description || ''}</textarea>
+                    <textarea id="pdpProjectDescription" class="field-textarea" placeholder="תיאור הפרויקט...">${unescapeForInput(project.description || '')}</textarea>
                 </div>
             </div>
             <div class="pdp-section">
@@ -673,7 +673,7 @@ function renderProjectDetailsPage(project) {
     columnsListEl.innerHTML = cols.map(col => `
         <div class="pdp-column-row">
             <span class="project-stat-dot" style="--col-hue: ${col.hue};"></span>
-            <input type="text" class="field-input pdp-column-input" data-col-id="${col.id}" value="${escapeAttr(col.name)}">
+            <input type="text" class="field-input pdp-column-input" data-col-id="${col.id}" value="${escapeAttr(unescapeForInput(col.name))}">
         </div>
     `).join('');
 
@@ -719,13 +719,15 @@ function saveProjectFromDetailsPage(id) {
         const newName = input.value.trim();
         if (!newName) return;
         const col = columns.find(c => c.id === colId);
-        if (col && col.name !== escapeHtml(newName)) {
+        if (col) {
             col.name = escapeHtml(newName);
+            col.updatedAt = new Date().toISOString();
         }
     });
     saveColumns(columns);
 
     loadProjects();
-    updateUI();
-    openProjectDetailsPage();
+    renderProjectDetails();
+    updateSelectorButton();
+    renderProjectDetailsPage(getProjects().find(p => p.id === id));
 }
