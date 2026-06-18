@@ -597,6 +597,12 @@ function renderProjectDetailsPage(project) {
                     </div>
                 </div>
             </div>
+            <div class="pdp-section pdp-section-wide">
+                <div class="field">
+                    <label class="field-label">שמות עמודות (שלבי משימה)</label>
+                    <div id="pdpColumnsList"></div>
+                </div>
+            </div>
             <div class="pdp-actions">
                 <button class="btn-primary" type="button" id="pdpSaveBtn">שמור שינויים</button>
             </div>
@@ -661,6 +667,16 @@ function renderProjectDetailsPage(project) {
 
     renderMembers();
 
+    // Columns (stages) rename
+    const columnsListEl = page.querySelector('#pdpColumnsList');
+    const cols = getColumns();
+    columnsListEl.innerHTML = cols.map(col => `
+        <div class="pdp-column-row">
+            <span class="project-stat-dot" style="--col-hue: ${col.hue};"></span>
+            <input type="text" class="field-input pdp-column-input" data-col-id="${col.id}" value="${escapeAttr(col.name)}">
+        </div>
+    `).join('');
+
     // Save button
     page.querySelector('#pdpSaveBtn').addEventListener('click', () => {
         saveProjectFromDetailsPage(project.id);
@@ -695,6 +711,20 @@ function saveProjectFromDetailsPage(id) {
     project.updatedAt = new Date().toISOString();
 
     saveProjects(projects);
+
+    // Save column renames
+    const columns = getColumns();
+    page.querySelectorAll('.pdp-column-input').forEach(input => {
+        const colId = input.dataset.colId;
+        const newName = input.value.trim();
+        if (!newName) return;
+        const col = columns.find(c => c.id === colId);
+        if (col && col.name !== escapeHtml(newName)) {
+            col.name = escapeHtml(newName);
+        }
+    });
+    saveColumns(columns);
+
     loadProjects();
     updateUI();
     openProjectDetailsPage();

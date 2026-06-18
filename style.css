@@ -818,6 +818,17 @@ input {
     flex-shrink: 0;
 }
 
+.pdp-column-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+}
+
+.pdp-column-input {
+    flex: 1;
+}
+
 .pdp-actions {
     grid-column: 1 / -1;
     display: flex;
