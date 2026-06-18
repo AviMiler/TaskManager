@@ -117,6 +117,7 @@ async function addColumn(name) {
     columns.push({ id, name: safeName, hue: (columns.length * 47) % 360, order: maxOrder + 1, updatedAt: new Date().toISOString() });
     saveColumns(columns);
     renderKanban();
+    renderProjectDetails();
 }
 
 async function deleteColumn(id) {
@@ -136,6 +137,7 @@ async function deleteColumn(id) {
     if (!ok) return;
     saveColumns(columns.filter(c => c.id !== id));
     renderKanban();
+    renderProjectDetails();
 }
 
 function renameColumn(id, newName) {
@@ -147,4 +149,5 @@ function renameColumn(id, newName) {
     col.name = escapeHtml(newName);
     saveColumns(columns);
     renderKanban();
+    renderProjectDetails();
 }
