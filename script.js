@@ -12,6 +12,7 @@ const DEFAULT_USER = { name: 'דנה גולן', role: 'מנהל פרויקטים
 
 let currentProjectId = null;
 let editingTaskId = null;
+let modalSubtasks = [];
 let draggingTaskId = null;
 let nextTaskId = 1000;
 let currentView = 'kanban'; // 'kanban' | 'list'
@@ -404,6 +405,7 @@ function addTask(data) {
         assignee: escapeHtml((data.assignee || '').trim()),
         due: escapeHtml((data.due || '').trim()),
         dueIn: data.dueIn !== undefined ? data.dueIn : null,
+        subtasks: Array.isArray(data.subtasks) ? data.subtasks : [],
         comments: 0,
         attachments: 0,
         createdAt: new Date().toISOString()
@@ -431,6 +433,7 @@ function updateTask(id, data) {
         task.due = escapeHtml(data.due.trim());
         task.dueIn = data.dueIn !== undefined ? data.dueIn : null;
     }
+    if (data.subtasks !== undefined) task.subtasks = data.subtasks;
     saveTasks(tasks);
     loadProjects();
     renderKanban();
@@ -598,6 +601,14 @@ function buildCard(task) {
                     ${task.due}
                 </span>
             ` : ''}
+            ${task.subtasks && task.subtasks.length ? `
+                <span class="subtask-progress">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+                    </svg>
+                    ${task.subtasks.filter(s => s.done).length}/${task.subtasks.length}
+                </span>
+            ` : ''}
             <div class="card-trailing">
                 ${task.assignee ? `<div class="avatar avatar-sm" style="--hue: ${nameHue(task.assignee)};" title="${task.assignee}">${initials(task.assignee)}</div>` : ''}
             </div>
@@ -680,11 +691,60 @@ function openEditModal(taskId, defaultColumnId) {
 
     const modal = buildModal(task, isNew, defaultColumnId);
     document.body.appendChild(modal);
+    renderModalSubtasks();
 
     setTimeout(() => {
         const titleInput = modal.querySelector('#modalTitle');
         if (titleInput) titleInput.focus();
     }, 50);
+}
+
+// ===== Subtasks (within task modal) =====
+function generateSubtaskId() {
+    return 'st_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+function renderModalSubtasks() {
+    const container = document.getElementById('modalSubtasksList');
+    if (!container) return;
+
+    if (modalSubtasks.length === 0) {
+        container.innerHTML = '<div class="subtasks-empty">אין תתי-משימות עדיין</div>';
+        return;
+    }
+
+    container.innerHTML = modalSubtasks.map(st => `
+        <div class="subtask-item">
+            <label class="subtask-check">
+                <input type="checkbox" ${st.done ? 'checked' : ''} onchange="toggleModalSubtask('${st.id}')" aria-label="סמן כהושלם">
+            </label>
+            <span class="subtask-title ${st.done ? 'done' : ''}">${st.title}</span>
+            <button type="button" class="subtask-delete-btn" onclick="deleteModalSubtask('${st.id}')" title="מחק" aria-label="מחק תת-משימה">×</button>
+        </div>
+    `).join('');
+}
+
+function addModalSubtask() {
+    const input = document.getElementById('modalSubtaskInput');
+    if (!input) return;
+    const text = input.value.trim();
+    if (!text) return;
+
+    modalSubtasks.push({ id: generateSubtaskId(), title: escapeHtml(text), done: false });
+    input.value = '';
+    renderModalSubtasks();
+    input.focus();
+}
+
+function toggleModalSubtask(id) {
+    const st = modalSubtasks.find(s => s.id === id);
+    if (st) st.done = !st.done;
+    renderModalSubtasks();
+}
+
+function deleteModalSubtask(id) {
+    modalSubtasks = modalSubtasks.filter(s => s.id !== id);
+    renderModalSubtasks();
 }
 
 function buildModal(task, isNew, defaultColumnId) {
@@ -695,6 +755,8 @@ function buildModal(task, isNew, defaultColumnId) {
     const columns = getColumns();
     const fallbackState = defaultColumnId || (columns[0] && columns[0].id) || 'todo';
     const t = task || { title: '', description: '', state: fallbackState, priority: 'med', tag: '', assignee: '', due: '', dueIn: null };
+
+    modalSubtasks = Array.isArray(t.subtasks) ? t.subtasks.map(st => ({ ...st })) : [];
 
     const stateOptions = columns.map(c =>
         `<option value="${c.id}" ${t.state === c.id ? 'selected' : ''}>${c.name}</option>`
@@ -714,6 +776,14 @@ function buildModal(task, isNew, defaultColumnId) {
                 <div class="field">
                     <label class="field-label">תיאור</label>
                     <textarea id="modalDescription" class="field-textarea" placeholder="פרטים נוספים...">${unescapeForInput(t.description)}</textarea>
+                </div>
+                <div class="field">
+                    <label class="field-label">תתי-משימות</label>
+                    <div class="subtasks-list" id="modalSubtasksList"></div>
+                    <div class="subtask-add-row">
+                        <input type="text" id="modalSubtaskInput" class="field-input" placeholder="תת-משימה חדשה..." onkeydown="if(event.key==='Enter'){event.preventDefault(); addModalSubtask();}">
+                        <button type="button" class="btn-secondary subtask-add-btn" onclick="addModalSubtask()">+ הוסף</button>
+                    </div>
                 </div>
                 <div class="field-row">
                     <div class="field">
@@ -801,7 +871,8 @@ function saveTaskFromModal(taskId) {
         tag: document.getElementById('modalTag').value,
         assignee: document.getElementById('modalAssignee').value,
         due: isoDate ? dueDisplay : '',
-        dueIn: dueInfo.dueIn
+        dueIn: dueInfo.dueIn,
+        subtasks: modalSubtasks
     };
 
     if (taskId === null || taskId === undefined) {
